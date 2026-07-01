@@ -933,14 +933,21 @@
    element_key | tier | effet_id
    ========================================================= */
 
+body: JSON.stringify({
+  joueur: playerName,
+  section: 'elementaire',
+  data: masteryChoices,
+  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
+}),
+
 const DATA_SHEETS = {
-  competences: "", // URL CSV de l'onglet "competences" du Sheet DATA
-  elements:    "", // URL CSV de l'onglet "elements" du Sheet DATA
+  competences: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1587029985&single=true&output=csv", // URL CSV de l'onglet "competences" du Sheet DATA
+  elements:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv", // URL CSV de l'onglet "elements" du Sheet DATA
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
 };
 
 const PLAYER_SHEETS = {
-  // "Alice": "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+	"Cryzhou": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQybr2T9tD7G9CamxTe3-t9JQPyZ3IijFjOgAsCITFCwXN7u6JWjidqisyRL-Da7_mmu7Yzu7RNMeJn/pub?gid=0&single=true&output=csv",
   // "Bob":   "https://docs.google.com/.../pub?gid=YYYY&single=true&output=csv",
 };
 
@@ -955,7 +962,7 @@ const PLAYER_SAVE_SHEETS = {
 // URL de déploiement du Google Apps Script (voir AppsScript_Joueurs.gs).
 // Une fois déployé, colle l'URL ici : elle commence par
 // https://script.google.com/macros/s/...
-const APPS_SCRIPT_URL = "";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoI0fTradSvM-MD109rCxSFki_Vzsoe0lbmBi897g6JuejZ7nTY6t7G4WSWmffNOhW/exec";
 
 const SCHOOL_THEMES = {
   evocation:    { label: "Évocation",    color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
