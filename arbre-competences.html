@@ -1773,13 +1773,6 @@ let _saveDebounceTimer = null;
 
 function savePlayerChoices(){
 	
-  body: JSON.stringify({
-  joueur: playerName,
-  section: 'elementaire',
-  data: masteryChoices,
-  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
-  }),
-
   if(!APPS_SCRIPT_URL) return;
   const playerName = getPlayerFromURL();
   if(!playerName) return;
@@ -1795,11 +1788,12 @@ function savePlayerChoices(){
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          joueur: playerName,
-          section: 'elementaire',
-          data: masteryChoices,
-        }),
+          body: JSON.stringify({
+		  joueur: playerName,
+		  section: 'elementaire',
+		  data: masteryChoices,
+		  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
+		  }),
         redirect: 'follow', // Apps Script redirects on POST
       });
       const json = await res.json();
