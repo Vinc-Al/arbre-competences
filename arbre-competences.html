@@ -439,6 +439,27 @@
     filter:grayscale(0.6) brightness(0.7);
     transition:filter 0.2s ease;
     pointer-events:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .node .node-icon-img{
+    width:36px;
+    height:36px;
+    object-fit:contain;
+    border-radius:4px;
+    filter:grayscale(0.5) brightness(0.75);
+    transition:filter 0.2s ease;
+    pointer-events:none;
+    display:block;
+  }
+  .node.unlocked .node-icon-img,
+  .node.available .node-icon-img,
+  .node.root .node-icon-img{
+    filter:none;
+  }
+  .node.locked .node-icon-img{
+    filter:grayscale(0.8) brightness(0.5);
   }
   .node .node-label{
     position:absolute;
@@ -912,21 +933,14 @@
    element_key | tier | effet_id
    ========================================================= */
 
-body: JSON.stringify({
-  joueur: playerName,
-  section: 'elementaire',
-  data: masteryChoices,
-  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
-}),
-
 const DATA_SHEETS = {
-  competences: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1587029985&single=true&output=csv", // URL CSV de l'onglet "EVOCATION" du Sheet DATA
-  elements:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv", // URL CSV de l'onglet "elements" du Sheet DATA
+  competences: "", // URL CSV de l'onglet "competences" du Sheet DATA
+  elements:    "", // URL CSV de l'onglet "elements" du Sheet DATA
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
 };
 
 const PLAYER_SHEETS = {
-  "Cryzhou": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQybr2T9tD7G9CamxTe3-t9JQPyZ3IijFjOgAsCITFCwXN7u6JWjidqisyRL-Da7_mmu7Yzu7RNMeJn/pub?gid=0&single=true&output=csv",
+  // "Alice": "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
   // "Bob":   "https://docs.google.com/.../pub?gid=YYYY&single=true&output=csv",
 };
 
@@ -941,7 +955,7 @@ const PLAYER_SAVE_SHEETS = {
 // URL de déploiement du Google Apps Script (voir AppsScript_Joueurs.gs).
 // Une fois déployé, colle l'URL ici : elle commence par
 // https://script.google.com/macros/s/...
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoI0fTradSvM-MD109rCxSFki_Vzsoe0lbmBi897g6JuejZ7nTY6t7G4WSWmffNOhW/exec";
+const APPS_SCRIPT_URL = "";
 
 const SCHOOL_THEMES = {
   evocation:    { label: "Évocation",    color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
@@ -2013,7 +2027,7 @@ function renderTree(){
     div.style.transform = 'translate(-50%, -50%)';
     div.style.setProperty('--branche-color', theme.color);
     div.innerHTML = `
-      <span class="icon">${s.icone || '★'}</span>
+      <span class="icon">${renderIcon(s.icone)}</span>
       <span class="node-label">${(s.nom||s.id)}</span>
     `;
     div.addEventListener('click', () => openPanel(s));
@@ -2021,6 +2035,36 @@ function renderTree(){
   });
 
   updatePointsDisplay(skills);
+}
+
+/* =========================================================
+   RENDU DES ICÔNES
+   =========================================================
+   La colonne "icone" du Sheet peut contenir :
+   - Un emoji direct : 🔥 ⚡ ✨ etc.
+   - Une URL complète : https://i.imgur.com/abc.png
+   - Un chemin relatif vers une image dans le repo :
+     icones/feu.png  (fichier uploadé dans GitHub à côté du HTML)
+   La fonction détecte automatiquement lequel utiliser.
+   ========================================================= */
+function isImageRef(icone){
+  if(!icone) return false;
+  // URL absolue
+  if(icone.startsWith('http://') || icone.startsWith('https://')) return true;
+  // Chemin relatif avec extension image connue
+  if(/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(icone)) return true;
+  return false;
+}
+
+function renderIcon(icone){
+  if(!icone) return '★';
+  if(isImageRef(icone)){
+    // Échapper les guillemets pour éviter les injections dans l'attribut src
+    const safe = icone.replace(/"/g, '&quot;');
+    return `<img class="node-icon-img" src="${safe}" alt="" draggable="false">`;
+  }
+  // Emoji ou texte simple
+  return icone;
 }
 
 function updatePointsDisplay(skills){
