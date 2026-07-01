@@ -933,12 +933,7 @@
    element_key | tier | effet_id
    ========================================================= */
 
-body: JSON.stringify({
-  joueur: playerName,
-  section: 'elementaire',
-  data: masteryChoices,
-  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
-}),
+
 
 const DATA_SHEETS = {
   competences: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1587029985&single=true&output=csv", // URL CSV de l'onglet "competences" du Sheet DATA
@@ -1777,6 +1772,14 @@ function renderMasteryView(){
 let _saveDebounceTimer = null;
 
 function savePlayerChoices(){
+	
+  body: JSON.stringify({
+  joueur: playerName,
+  section: 'elementaire',
+  data: masteryChoices,
+  secret: "860970b4b2f5b71b0d47f9f438a2e84cfa195e27dad9643c812e1fa8fbe31d92", // même valeur
+  }),
+
   if(!APPS_SCRIPT_URL) return;
   const playerName = getPlayerFromURL();
   if(!playerName) return;
