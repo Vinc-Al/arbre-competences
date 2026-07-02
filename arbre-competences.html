@@ -103,70 +103,15 @@
     white-space:nowrap;
   }
   header .player-chip strong{ color:var(--gold-bright); font-weight:600; }
-  #player-class-badge{
-    display:inline-block;
-    font-size:0.68rem;
-    color:var(--text-1);
-    background:rgba(255,255,255,0.06);
-    border:1px solid var(--line-dim);
-    border-radius:4px;
-    padding:1px 7px;
-    margin-left:8px;
-    vertical-align:middle;
-    letter-spacing:0.04em;
-  }
-  .points-block{
-    display:flex;
-    flex-direction:column;
-    gap:5px;
-    align-items:flex-end;
-  }
-  .points-bar-wrap{
-    width:160px;
-    height:4px;
-    background:rgba(111,168,255,0.12);
-    border-radius:999px;
-    overflow:hidden;
-  }
-  .points-bar-fill{
-    height:100%;
-    border-radius:999px;
-    background:var(--arcane-glow);
-    transition:width 0.4s ease, background 0.3s ease;
-    width:0%;
-  }
-  .points-bar-fill.almost-full{ background:#e0c46a; }
-  .points-bar-fill.full{ background:#e08a8a; }
   header .points{
     font-family:'Inter', sans-serif;
     font-size:0.82rem;
     color:var(--arcane-glow);
     border:1px solid rgba(111,168,255,0.3);
-    padding:5px 14px;
+    padding:6px 14px;
     border-radius:999px;
     background:rgba(111,168,255,0.06);
     white-space:nowrap;
-  }
-  header .points.budget-warning{ color:#e0c46a; border-color:rgba(224,196,106,0.4); background:rgba(224,196,106,0.06); }
-  header .points.budget-full   { color:#e08a8a; border-color:rgba(224,138,138,0.4); background:rgba(224,138,138,0.06); }
-
-  .node.budget-locked{
-    opacity:0.45;
-    filter:saturate(0.3);
-    cursor:not-allowed;
-  }
-  .node.budget-locked::after{
-    content:'🔒';
-    position:absolute;
-    top:-8px; right:-8px;
-    font-size:0.7rem;
-    background:var(--bg-0);
-    border-radius:50%;
-    padding:1px 3px;
-    pointer-events:none;
-  }
-  .node.budget-locked:hover{
-    transform:translate(-50%,-50%) scale(1.0) !important;
   }
 
   /* School tabs */
@@ -325,111 +270,115 @@
   #canvas-wrap.hidden{ display:none; }
 
   .mastery-empty{
-    color:var(--text-1);
-    font-family:'Inter', sans-serif;
-    font-size:0.9rem;
-    text-align:center;
-    margin-top:60px;
+    color:var(--text-1); font-family:'Inter',sans-serif;
+    font-size:0.9rem; text-align:center; margin-top:60px;
   }
-
   .mastery-branch-select{
-    margin-bottom:22px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
+    margin-bottom:16px; display:flex; align-items:center; gap:10px;
   }
-  .mastery-branch-select label{
-    font-family:'Inter', sans-serif;
-    font-size:0.78rem;
-    color:var(--text-1);
-  }
+  .mastery-branch-select label{ font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--text-1); }
   .mastery-branch-select select{
-    font-family:'Inter', sans-serif;
-    font-size:0.82rem;
-    color:var(--text-0);
-    background:rgba(255,255,255,0.05);
-    border:1px solid var(--line-dim);
-    border-radius:6px;
-    padding:6px 10px;
+    font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--text-0);
+    background:rgba(255,255,255,0.05); border:1px solid var(--line-dim);
+    border-radius:6px; padding:5px 10px;
   }
 
-  .element-card{
-    max-width:640px;
-    margin:0 auto 36px;
-    background:var(--panel-bg);
-    border:1.5px solid var(--line-dim);
-    border-radius:14px;
-    padding:22px 26px;
+  /* ── Navigation des tiers (T0→T1→T2→T3) ── */
+  .mst-tier-nav{
+    display:flex; align-items:center; gap:0;
+    margin-bottom:24px; padding:16px 0;
   }
-  .element-card .ec-title{
+  .mst-tier-nav-item{
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    min-width:80px; padding:10px 14px; border-radius:10px;
+    border:1.5px solid var(--line-dim); cursor:pointer;
+    background:rgba(255,255,255,0.02); position:relative;
+    transition:border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    user-select:none;
+  }
+  .mst-tier-nav-item:hover{ background:rgba(255,255,255,0.05); }
+  .mst-tier-nav-item.active{ background:rgba(255,255,255,0.04); }
+  .mst-tier-nav-label{
+    font-family:'Cinzel',serif; font-size:1rem; font-weight:700;
+    color:var(--text-1); transition:color 0.2s ease;
+  }
+  .mst-tier-nav-name{
+    font-family:'Inter',sans-serif; font-size:0.7rem;
+    color:var(--text-1); white-space:nowrap;
+  }
+  .mst-tier-chosen-dot{
+    position:absolute; top:-5px; right:-5px;
+    width:10px; height:10px; border-radius:50%;
+    border:2px solid var(--bg-0);
+  }
+  .mst-tier-connector{
+    flex:1; height:2px; opacity:0.5; min-width:20px;
+    transition:background 0.3s ease;
+  }
+
+  /* ── Titre du tier actif ── */
+  .mst-tier-header{
+    display:flex; flex-direction:column; gap:5px; margin-bottom:14px;
+  }
+  .mst-tier-title{
     font-family:'Cinzel','Spectral',Georgia,serif;
-    text-align:center;
-    font-size:1.1rem;
-    letter-spacing:0.06em;
-    text-transform:uppercase;
-    margin:0 0 14px;
+    font-size:1rem; letter-spacing:0.06em; font-weight:600;
   }
-  .element-card .ec-intro{
-    font-family:'Inter', sans-serif;
-    font-size:0.88rem;
-    line-height:1.6;
-    color:var(--text-0);
-    text-align:center;
-    margin:0 0 22px;
+  .mst-tier-intro{
+    font-family:'Inter',sans-serif; font-size:0.8rem;
+    color:var(--text-1); line-height:1.45;
   }
-  .element-card .ec-tier{
-    margin-bottom:18px;
+
+  /* ── Diagramme éclaté SVG ── */
+  .mst-diagram-wrap{
+    display:flex; justify-content:center;
+    margin-bottom:20px;
   }
-  .element-card .ec-tier-label{
-    font-family:'Inter', sans-serif;
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.1em;
-    color:var(--text-1);
-    margin-bottom:8px;
+  .mst-diagram-svg{
+    width:100%; max-width:600px; height:auto;
+    overflow:visible;
   }
-  .element-card .ec-choice{
-    display:flex;
-    align-items:flex-start;
-    gap:10px;
-    padding:10px 12px;
-    border-radius:8px;
-    border:1px solid var(--line-dim);
-    margin-bottom:6px;
-    cursor:pointer;
-    transition:border-color 0.15s ease, background 0.15s ease;
+  .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
+  .mst-node-svg:hover circle{ opacity:0.85; }
+  .mst-no-effects{
+    font-family:'Inter',sans-serif; font-size:0.82rem;
+    color:var(--text-1); text-align:center; padding:20px;
   }
-  .element-card .ec-choice:hover{ background:rgba(255,255,255,0.03); }
-  .element-card .ec-choice.selected{
-    border-color:var(--ec-color, var(--gold));
-    background:color-mix(in srgb, var(--ec-color, var(--gold)) 10%, transparent);
+
+  /* ── Fiches d'effets ── */
+  .mst-effects-row{
+    display:flex; gap:12px; flex-wrap:wrap;
   }
-  .element-card .ec-choice .radio-dot{
-    margin-top:3px;
-    width:14px; height:14px;
-    border-radius:50%;
+  .mst-effect-card{
+    flex:1 1 200px; min-width:180px;
+    background:rgba(255,255,255,0.02);
     border:1.5px solid var(--line-dim);
-    flex-shrink:0;
-    position:relative;
+    border-radius:10px; padding:13px 15px;
+    cursor:pointer;
+    transition:border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   }
-  .element-card .ec-choice.selected .radio-dot{ border-color:var(--ec-color, var(--gold)); }
-  .element-card .ec-choice.selected .radio-dot::after{
-    content:'';
-    position:absolute;
-    top:2px; left:2px; right:2px; bottom:2px;
-    border-radius:50%;
-    background:var(--ec-color, var(--gold));
+  .mst-effect-card:hover{ background:rgba(255,255,255,0.04); }
+  .mst-effect-card.chosen{ box-shadow:0 0 14px rgba(0,0,0,0.3); }
+  .mst-effect-name{
+    font-family:'Inter',sans-serif; font-weight:700;
+    font-size:0.85rem; text-decoration:underline;
+    color:var(--text-0); margin-bottom:7px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
   }
-  .element-card .ec-choice-body{ font-family:'Inter', sans-serif; font-size:0.84rem; line-height:1.5; }
-  .element-card .ec-choice-name{ font-weight:700; text-decoration:underline; margin-bottom:2px; color:var(--text-0); }
-  .element-card .ec-choice-desc{ color:var(--text-0); opacity:0.92; }
-  .element-card .ec-empty-tier{
-    font-family:'Inter', sans-serif;
-    font-size:0.8rem;
-    color:var(--text-1);
-    font-style:italic;
-    padding:8px 0;
+  .mst-chosen-badge{
+    font-size:0.62rem; font-weight:600; text-decoration:none;
+    padding:2px 7px; border-radius:999px; color:#0a0e14;
+    letter-spacing:0.04em;
+  }
+  .mst-effect-desc{
+    font-family:'Inter',sans-serif; font-size:0.78rem;
+    color:var(--text-0); line-height:1.5; opacity:0.9;
+  }
+  .mst-regle{
+    font-family:'Inter',sans-serif; font-size:0.74rem;
+    color:var(--text-1); font-style:italic;
+    text-align:center; margin-top:18px; padding-top:14px;
+    border-top:1px solid var(--line-dim);
   }
 
   #canvas-wrap{
@@ -739,16 +688,8 @@
       <div class="subtitle">Données chargées depuis Google Sheets (CSV) — par joueur et par école</div>
     </div>
     <div class="right-block">
-      <div class="player-chip">
-        Joueur : <strong id="player-name">—</strong>
-        <span id="player-class-badge"></span>
-      </div>
-      <div class="points-block">
-        <div class="points-bar-wrap">
-          <div class="points-bar-fill" id="points-bar-fill"></div>
-        </div>
-        <div class="points" id="points-display">— points disponibles</div>
-      </div>
+      <div class="player-chip">Joueur : <strong id="player-name">—</strong></div>
+      <div class="points" id="points-display">— points disponibles</div>
     </div>
   </header>
 
@@ -1082,6 +1023,8 @@ const ELEMENT_CARDS = {
   feu: {
     titre: "Chaleur",
     intro: "Vous appliquez des dégâts de [feu](feu), les jets de sauvegarde sont de **Dextérité**.",
+    tiers_noms: ["Étincelle", "Brasier", "Inferno", "Cataclysme"],
+    regle: "Le mage choisit un effet au choix par tiers.",
   },
   froid: {
     titre: "Gel",
@@ -1121,49 +1064,51 @@ const ELEMENT_CARDS = {
 // branche où l'effet est proposé, ou "*" pour toutes les branches.
 const ELEMENT_MASTERY = {
   feu: [
-    // Tier 0 — Modulation de forme
+    // ── T0 — Étincelle ────────────────────────────────────────────────────
     [
-      { id:"feu_t0_pur", nom:"Dégâts de feu purs", branches:"*",
-        description:"Vos dégâts restent de **feu** seul, sans modification." },
+      { id:"feu_t0_primal",        nom:"Feu primal",             branches:"*",
+        description:"**Maîtrise par défaut** : Vos dégâts infligent des dégâts de [feu](feu)." },
+      { id:"feu_t0_eclats",        nom:"Éclats rougeoyants",     branches:"*",
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **perçant**." },
+      { id:"feu_t0_magmatique",    nom:"Bloc magmatique",        branches:"*",
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **contondant**." },
+      { id:"feu_t0_lame",          nom:"Lame pyroplastique",     branches:"*",
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **tranchant**." },
       { id:"feu_t0_pyroplastique", nom:"Détonation pyroplastique", branches:"*",
         description:"Vos dégâts sont divisés en deux sources [feu](feu) et [force](special)." },
-      { id:"feu_t0_magmatique", nom:"Bloc magmatique", branches:"*",
-        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **contondant**." },
-      { id:"feu_t0_rougeoyant", nom:"Éclats rougeoyant", branches:"*",
-        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **perçant**." },
     ],
-    // Tier 1
+    // ── T1 — Brasier ──────────────────────────────────────────────────────
     [
-      { id:"feu_t1_brulure", nom:"Brûlure", branches:"trait_energetique",
-        description:"Vous appliquez des dégâts au prochain tour égaux à **2d6** (X = Rank du sort)." },
-      { id:"feu_t1_brulure_amplifiee", nom:"Brûlure amplifiée", branches:"trait_corrosif",
-        description:"Vos charges de corrosion appliquent **3 dégâts** supplémentaires par tour." },
-      { id:"feu_t1_explosion_chaleur", nom:"Explosion de chaleur", branches:"lien_persistant",
-        description:"Lorsque vous réactivez votre **Lien persistant**, le lien explose au contact de la cible dans une zone de **3 m** ; chaque cible doit faire un JdS ou subir la moitié des dégâts." },
+      { id:"feu_t1_incineration",  nom:"Incinération",           branches:"lien_persistant,arc_elementaire",
+        description:"Vos sorts **[Lien persistant I]** et **[Arc élémentaire I]** déclenchent des explosions. Toute créature se trouvant dans la zone d'effet doit faire un jet de sauvegarde ou subir la moitié des dégâts du sort concerné." },
+      { id:"feu_t1_brulure",       nom:"Brûlure",                branches:"*",
+        description:"Vous appliquez des dégâts supplémentaires au prochain sort de feu que vous lancez sur la cible à **X×1d6** (X = Rank du sort) marqué par la brûlure.\n\n**OU [Brûlure amplifiée] — [Trait corrosif I]** : L'effet de brûlure change et vos charges de corrosions appliquent **2 dégâts** supplémentaires par tours." },
     ],
-    // Tier 2
+    // ── T2 — Inferno ──────────────────────────────────────────────────────
     [
-      { id:"feu_t2_souffler", nom:"Souffler", branches:"trait_energetique",
-        description:"La borne maximale des dés augmente de **2**." },
-      { id:"feu_t2_incineration", nom:"Incinération", branches:"lien_persistant",
-        description:"Si la cible meurt sous l'effet du lien, celle-ci explose : toute créature dans un rayon de **5 mètres** doit réussir un JdS ou subir le double des dégâts du sort." },
+      { id:"feu_t2_afflux",        nom:"Afflux de destruction",  branches:"eclats_energie",
+        description:"**[Éclats d'énergie I+]** génère un projectile supplémentaire." },
+      { id:"feu_t2_attiser",       nom:"Attiser la flamme",      branches:"*",
+        description:"**[Châtiment I+]** inflige une brûlure entretenue par votre **[Concentration]** qui inflige **1d8** dégâts de [feu](feu) par tours.\n\n**OU [Nova I+]** et **[Nova canalisée I+]** infligent **2 dégâts** supplémentaires à l'ennemi subissant le jet de dégâts par ennemis touchés ce tour." },
     ],
-    // Tier 3
+    // ── T3 — Cataclysme ───────────────────────────────────────────────────
     [
-      { id:"feu_t3_coeur_brasier", nom:"Cœur du brasier", branches:"*",
-        description:"Une fois par combat, votre prochain sort de feu **ignore les résistances** de la cible." },
+      { id:"feu_t3_conflagration", nom:"Conflagration",          branches:"*",
+        description:"La borne maximale des dés de dégâts augmente de **4**.\n\n**Exemple** : 1d8 → 1d12." },
+      { id:"feu_t3_assecher",      nom:"Assécher",               branches:"intrusion_magique",
+        description:"**[Intrusion magique I+]** impose le désavantage systématique aux jets de sauvegarde de la **Cible**." },
+      { id:"feu_t3_scorie",        nom:"Scorie",                 branches:"*",
+        description:"Vos sorts **ignorent les résistances** au [feu](feu) de la Cible. Les immunités sont traitées comme des résistances." },
     ],
   ],
-  // Les autres éléments n'ont pour l'instant que des emplacements
-  // vides à 4 tiers, à compléter de la même manière.
-  froid: [[],[],[],[]],
-  foudre: [[],[],[],[]],
-  ombre: [[],[],[],[]],
-  lumiere: [[],[],[],[]],
-  necrotique: [[],[],[],[]],
-  nature: [[],[],[],[]],
-  acide: [[],[],[],[]],
-  arcane_force: [[],[],[],[]],
+  froid:       [[],[],[],[]],
+  foudre:      [[],[],[],[]],
+  ombre:       [[],[],[],[]],
+  lumiere:     [[],[],[],[]],
+  necrotique:  [[],[],[],[]],
+  nature:      [[],[],[],[]],
+  acide:       [[],[],[],[]],
+  arcane_force:[[],[],[],[]],
 };
 
 /* =========================================================
@@ -1370,20 +1315,12 @@ const TOP_PADDING   = 80;
 const LEFT_PADDING  = 110;
 const ROOT_GAP_EXTRA= 70;   // extra vertical gap between the school root and tier-0 nodes
 
-let allSkills = [];
-let schoolsOrder = [];
-let currentSchool = null;
+let allSkills = [];          // all skills for the current player, all schools
+let schoolsOrder = [];        // list of school keys in encounter order
+let currentSchool = null;     // active school key
 let zoomLevel = 1;
 
-// Profil joueur chargé depuis le Sheet joueur (lignes type="profil")
-let playerProfile = {
-  classe:        '',
-  niveau:        1,
-  points_total:  0,   // points disponibles pour ce joueur
-  points_max:    999, // plafond absolu pour sa classe
-};
-
-let selectedElements = new Set();
+let selectedElements = new Set();   // element keys currently checked in the global menu
 let masteryChoices = {};            // `${element}_t${tier}` -> chosen effect id (per element per tier)
 let masteryViewOpen = false;        // whether the "Maîtrise élémentaire" view is showing
 let masteryBranchFilter = null;     // branche key used to filter which effects show in mastery view
@@ -1504,80 +1441,35 @@ async function loadData(){
   let skillsLoaded = false;
   let elementsLoaded = false;
 
-  // ─── 1. COMPÉTENCES depuis DATA_SHEETS ─────────────────────────────────────
-  // Le Sheet DATA est TOUJOURS la source des compétences (structure, noms,
-  // branches, descriptions, coûts). Le Sheet joueur ne contient PAS de
-  // compétences — il contient uniquement des états et un profil.
-  if(DATA_SHEETS.competences){
+  // --- Load competences (DATA sheet or player sheet) ---
+  const playerCsvUrl = PLAYER_SHEETS[playerName];
+  const competencesUrl = DATA_SHEETS.competences;
+  const skillsUrl = playerCsvUrl || competencesUrl;
+
+  if(skillsUrl){
     try{
-      const rows = await fetchCSV(DATA_SHEETS.competences);
-      if(rows.length){ allSkills = rows; skillsLoaded = true; }
+      const rows = await fetchCSV(skillsUrl);
+      allSkills = rows;
+      skillsLoaded = true;
     } catch(err){
-      console.warn('Compétences DATA inaccessibles, repli sur démo :', err);
+      console.warn('Compétences inaccessibles, repli sur démo :', err);
     }
   }
   if(!skillsLoaded){
     allSkills = DEMO_DATA;
-    statusEl.textContent = 'Mode démonstration — Sheet DATA non configuré';
+    statusEl.textContent = playerName
+      ? `Sheet de ${playerName} inaccessible — démonstration affichée`
+      : 'Mode démonstration — ajoute ?joueur=NomDuJoueur à l\'URL';
   }
 
-  // ─── 2. SHEET JOUEUR : profil + états ──────────────────────────────────────
-  // Format attendu (3 colonnes) :  type | id | valeur
-  //   type="profil"  id=classe/niveau/points_total/points_max  valeur=...
-  //   type="sort"    id=evo_te_0 etc.                          valeur=unlocked/available/locked
-  //
-  // Les lignes "profil" remplissent playerProfile.
-  // Les lignes "sort" créent une map id→etat appliquée par-dessus allSkills.
-  // Les lignes sans colonne "type" (ancien format 2 colonnes id/etat)
-  // sont traitées comme des "sort" pour rétro-compatibilité.
-  const playerCsvUrl = PLAYER_SHEETS[playerName];
-  if(playerCsvUrl){
-    try{
-      const rows = await fetchCSV(playerCsvUrl);
-      const etatMap = {};
-
-      rows.forEach(r => {
-        const type = (r.type   || '').trim().toLowerCase();
-        const id   = (r.id     || '').trim();
-        const val  = (r.valeur || r.etat || r.value || '').trim();
-        if(!id) return;
-
-        if(type === 'profil'){
-          // Lignes de profil → playerProfile uniquement
-          if(id === 'classe')        playerProfile.classe        = val;
-          else if(id === 'niveau')   playerProfile.niveau        = parseInt(val, 10) || 1;
-          else if(id === 'points_total') playerProfile.points_total = parseInt(val, 10) || 0;
-          else if(id === 'points_max')   playerProfile.points_max   = parseInt(val, 10) || 999;
-        } else {
-          // Lignes "sort" ou sans type → map d'états
-          if(val) etatMap[id] = val;
-        }
-      });
-
-      // Appliquer les états par-dessus les compétences DATA
-      if(Object.keys(etatMap).length > 0){
-        allSkills = allSkills.map(s => {
-          const joueurEtat = etatMap[s.id];
-          return joueurEtat ? { ...s, etat: joueurEtat } : s;
-        });
-      }
-
-      // Afficher le badge de classe dans le header
-      const badge = document.getElementById('player-class-badge');
-      if(badge && playerProfile.classe) badge.textContent = playerProfile.classe;
-
-    } catch(err){
-      console.warn('Sheet joueur inaccessible, états par défaut utilisés :', err);
-    }
-  }
-
-  // ─── 3. ÉLÉMENTS depuis DATA_SHEETS ────────────────────────────────────────
+  // --- Load elements from DATA sheet ---
   if(DATA_SHEETS.elements){
     try{
       const rows = await fetchCSV(DATA_SHEETS.elements);
       const parsed = parseElementsCSV(rows);
+      // Merge into live config objects (override hardcoded defaults)
       Object.assign(ELEMENT_THEMES, parsed.themes);
-      Object.assign(ELEMENT_CARDS,  parsed.cards);
+      Object.assign(ELEMENT_CARDS, parsed.cards);
       Object.assign(ELEMENT_MASTERY, parsed.mastery);
       elementsLoaded = true;
     } catch(err){
@@ -1585,30 +1477,39 @@ async function loadData(){
     }
   }
 
-  // ─── 4. COMBOS depuis DATA_SHEETS ──────────────────────────────────────────
+  // --- Load combos from DATA sheet ---
   if(DATA_SHEETS.combos){
     try{
       const rows = await fetchCSV(DATA_SHEETS.combos);
-      Object.assign(ELEMENT_COMBOS, parseCombosCSV(rows));
+      const parsed = parseCombosCSV(rows);
+      Object.assign(ELEMENT_COMBOS, parsed);
     } catch(err){
-      console.warn('Combos inaccessibles :', err);
+      console.warn('Combos inaccessibles, données codées en dur utilisées :', err);
     }
   }
 
-  // ─── 5. SAUVEGARDES maîtrise élémentaire ───────────────────────────────────
-  const saveUrl = typeof PLAYER_SAVE_SHEETS !== 'undefined' && PLAYER_SAVE_SHEETS[playerName];
-  if(saveUrl){
-    try{
-      const rows = await fetchCSV(saveUrl);
-      Object.assign(masteryChoices, parsePlayerSavesCSV(rows));
-    } catch(err){
-      console.warn('Sauvegardes joueur inaccessibles :', err);
+  // --- Load player mastery saves ---
+  if(playerCsvUrl){
+    // The player sheet may have a second tab for saves — but for now
+    // mastery saves live in the same tab; filter by a special marker column.
+    // If a dedicated save URL exists (PLAYER_SAVE_SHEETS), load from there.
+    const saveUrl = typeof PLAYER_SAVE_SHEETS !== 'undefined' && PLAYER_SAVE_SHEETS[playerName];
+    if(saveUrl){
+      try{
+        const rows = await fetchCSV(saveUrl);
+        const saved = parsePlayerSavesCSV(rows);
+        Object.assign(masteryChoices, saved);
+      } catch(err){
+        console.warn('Sauvegardes joueur inaccessibles :', err);
+      }
     }
   }
 
-  statusEl.textContent = skillsLoaded
-    ? `Données chargées${playerName ? ' pour ' + playerName : ''} ✓`
-    : statusEl.textContent;
+  if(skillsLoaded && elementsLoaded){
+    statusEl.textContent = `Données chargées${playerName ? ' pour ' + playerName : ''} ✓`;
+  } else if(skillsLoaded){
+    statusEl.textContent = `Compétences chargées${playerName ? ' pour ' + playerName : ''} ✓ (éléments : mode démo)`;
+  }
 }
 
 function schoolTheme(key){
@@ -1793,79 +1694,193 @@ function toggleMasteryView(forceOpen){
 }
 document.getElementById('mastery-toggle-btn').addEventListener('click', () => toggleMasteryView());
 
+/* État local de la vue maîtrise */
+let _masteryActiveTier = 0; // tier actuellement affiché dans le diagramme éclaté
+
 function renderMasteryView(){
   const container = document.getElementById('mastery-view');
-  const branches = getBranchesForCurrentSchool();
-
+  const branches  = getBranchesForCurrentSchool();
   if(!masteryBranchFilter || !branches.includes(masteryBranchFilter)){
     masteryBranchFilter = branches[0] || null;
   }
 
   const group = getActiveGroup();
   if(!group){
-    container.innerHTML = `<div class="mastery-empty">Sélectionne un élément (ou une paire d'éléments fusionnés) dans le menu ci-dessus pour voir sa progression de maîtrise.</div>`;
+    container.innerHTML = `<div class="mastery-empty">Sélectionne un élément dans le menu ci-dessus pour voir sa progression de maîtrise.</div>`;
     return;
   }
 
-  let html = '';
+  const { key: groupKey, theme, card, tiers } = group;
+  const tierNoms = card.tiers_noms || tiers.map((_,i) => `Tier ${i}`);
+  const color = theme.color;
 
-  // branch filter selector (affects which mastery effects are shown)
+  // Clamp le tier actif
+  if(_masteryActiveTier >= tiers.length) _masteryActiveTier = 0;
+
+  // ── Sélecteur de branche ────────────────────────────────────────────────
+  let html = '';
   if(branches.length){
     html += `<div class="mastery-branch-select">
-      <label for="mastery-branch-picker">Afficher les effets pertinents pour la branche :</label>
+      <label for="mastery-branch-picker">Branche :</label>
       <select id="mastery-branch-picker">
-        ${branches.map(b => `<option value="${b}" ${b===masteryBranchFilter?'selected':''}>${b.replace(/_/g,' ')}</option>`).join('')}
+        ${branches.map(b=>`<option value="${b}" ${b===masteryBranchFilter?'selected':''}>${b.replace(/_/g,' ')}</option>`).join('')}
       </select>
     </div>`;
   }
 
-  const { key: groupKey, theme, card, tiers } = group;
-
-  html += `<div class="element-card" style="--ec-color:${theme.color}">
-    <div class="ec-title" style="color:${theme.color}">${card.titre}</div>
-    <div class="ec-intro">${parseRichText(card.intro)}</div>`;
-
-  tiers.forEach((effects, tierIndex) => {
-    const relevant = effects.filter(ef => effectAppliesToBranch(ef, masteryBranchFilter));
-    html += `<div class="ec-tier">
-      <div class="ec-tier-label">Tier ${tierIndex}${tierIndex===0 ? ' — Modulation de forme' : ''}</div>`;
-    if(!relevant.length){
-      html += `<div class="ec-empty-tier">Aucun effet défini pour cette branche à ce tier.</div>`;
-    } else {
-      relevant.forEach(ef => {
-        const choiceKey = `${groupKey}_t${tierIndex}`;
-        const isSelected = masteryChoices[choiceKey] === ef.id;
-        html += `<div class="ec-choice ${isSelected?'selected':''}" data-choice-key="${choiceKey}" data-effect-id="${ef.id}">
-          <span class="radio-dot"></span>
-          <span class="ec-choice-body">
-            <div class="ec-choice-name">${ef.nom}</div>
-            <div class="ec-choice-desc">${parseRichText(ef.description)}</div>
-          </span>
-        </div>`;
-      });
+  // ── Navigation des tiers (ligne horizontale T0→T1→T2→T3) ───────────────
+  html += `<div class="mst-tier-nav">`;
+  tiers.forEach((_,ti) => {
+    const active = ti === _masteryActiveTier;
+    const ckey   = `${groupKey}_t${ti}`;
+    const chosen = masteryChoices[ckey];
+    const relevant = tiers[ti].filter(ef => effectAppliesToBranch(ef, masteryBranchFilter));
+    const hasChoice = !!chosen && relevant.some(ef => ef.id === chosen);
+    html += `<div class="mst-tier-nav-item ${active?'active':''} ${hasChoice?'has-choice':''}"
+      data-tier="${ti}"
+      style="${active?`border-color:${color};box-shadow:0 0 12px ${color}55`:''}
+             ${hasChoice&&!active?`border-color:${color}88`:''}">
+      <span class="mst-tier-nav-label" style="${active?`color:${color}`:hasChoice?`color:${color}99`:''}">T${ti}</span>
+      <span class="mst-tier-nav-name">${tierNoms[ti]}</span>
+      ${hasChoice?`<span class="mst-tier-chosen-dot" style="background:${color}"></span>`:''}
+    </div>`;
+    if(ti < tiers.length-1){
+      html += `<div class="mst-tier-connector" style="background:${hasChoice?color+'66':'#2a3344'}"></div>`;
     }
-    html += `</div>`;
+  });
+  html += `</div>`;
+
+  // ── Titre du tier actif ──────────────────────────────────────────────────
+  const activeTierEffects = tiers[_masteryActiveTier].filter(ef => effectAppliesToBranch(ef, masteryBranchFilter));
+  const activeCkey = `${groupKey}_t${_masteryActiveTier}`;
+  const activeChosen = masteryChoices[activeCkey];
+
+  html += `<div class="mst-tier-header">
+    <span class="mst-tier-title" style="color:${color}">${card.titre} — T${_masteryActiveTier} · ${tierNoms[_masteryActiveTier]}</span>
+    <span class="mst-tier-intro">${parseRichText(card.intro)}</span>
+  </div>`;
+
+  // ── Diagramme éclaté style D4 ────────────────────────────────────────────
+  // Construit en SVG : nœud central + nœuds d'effets disposés en étoile
+  const SVG_W = 600, SVG_H = 320;
+  const CX = SVG_W / 2, CY = SVG_H / 2;
+  const RADIUS = 115; // distance centre→nœuds effets
+  const NODE_R  = 30; // rayon des nœuds effets
+  const CENTER_R = 40;
+
+  const n = activeTierEffects.length;
+  // Angles répartis : si un seul effet, à droite; sinon étalés en éventail
+  function getAngle(i, total){
+    if(total === 1) return -Math.PI / 2; // haut
+    const span = total <= 3 ? Math.PI : 2 * Math.PI * (total-1)/total;
+    const start = -Math.PI/2 - span/2;
+    return start + (span/(total-1||1)) * i;
+  }
+
+  let svgNodes = [];
+  activeTierEffects.forEach((ef, i) => {
+    const angle = getAngle(i, n);
+    const nx = CX + RADIUS * Math.cos(angle);
+    const ny = CY + RADIUS * Math.sin(angle);
+    const isChosen = activeChosen === ef.id;
+    svgNodes.push({ ef, nx, ny, isChosen, angle });
   });
 
-  html += `</div>`;
+  html += `<div class="mst-diagram-wrap">
+    <svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="glow-${groupKey}">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>`;
+
+  // Lignes centre→nœuds
+  svgNodes.forEach(({nx, ny, isChosen}) => {
+    const lc = isChosen ? color : '#2a3344';
+    const op = isChosen ? '0.9' : '0.45';
+    const dashed = !isChosen ? 'stroke-dasharray="5 4"' : '';
+    html += `<line x1="${CX}" y1="${CY}" x2="${nx}" y2="${ny}"
+      stroke="${lc}" stroke-width="${isChosen?2.5:1.5}" opacity="${op}" ${dashed}/>`;
+  });
+
+  // Nœud central (tier)
+  html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}"
+    fill="#0f1520" stroke="${color}" stroke-width="2.5"
+    filter="url(#glow-${groupKey})"/>
+  <text x="${CX}" y="${CY-8}" text-anchor="middle" fill="${color}"
+    font-family="Cinzel,serif" font-size="14" font-weight="bold">T${_masteryActiveTier}</text>
+  <text x="${CX}" y="${CY+10}" text-anchor="middle" fill="${color}99"
+    font-family="Inter,sans-serif" font-size="9">${tierNoms[_masteryActiveTier]}</text>`;
+
+  // Nœuds d'effets
+  svgNodes.forEach(({ef, nx, ny, isChosen}) => {
+    const fc  = isChosen ? color+'33' : '#1b2230';
+    const sc  = isChosen ? color : '#3a4253';
+    const tc  = isChosen ? color : '#9aa4b8';
+    const sw  = isChosen ? 2.5 : 1.5;
+    const filt= isChosen ? `filter="url(#glow-${groupKey})"` : '';
+    // Tronquer le nom à 12 chars pour le SVG
+    const shortName = ef.nom.length > 12 ? ef.nom.slice(0,11)+'…' : ef.nom;
+    html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${activeCkey}" style="cursor:pointer">
+      <circle cx="${nx}" cy="${ny}" r="${NODE_R}"
+        fill="${fc}" stroke="${sc}" stroke-width="${sw}" ${filt}/>
+      <text x="${nx}" y="${ny+4}" text-anchor="middle" fill="${tc}"
+        font-family="Inter,sans-serif" font-size="8.5" font-weight="${isChosen?'700':'400'}">
+        ${shortName.split(' ').map((w,wi) =>
+          `<tspan x="${nx}" dy="${wi===0?-4:11}">${w}</tspan>`
+        ).join('')}
+      </text>
+    </g>`;
+  });
+
+  html += `</svg></div>`;
+
+  // ── Fiches détail des effets (sous le diagramme) ─────────────────────────
+  if(!activeTierEffects.length){
+    html += `<div class="mst-no-effects">Aucun effet disponible pour cette branche à T${_masteryActiveTier}.</div>`;
+  } else {
+    html += `<div class="mst-effects-row">`;
+    activeTierEffects.forEach(ef => {
+      const isChosen = activeChosen === ef.id;
+      html += `<div class="mst-effect-card ${isChosen?'chosen':''}"
+        data-eid="${ef.id}" data-ckey="${activeCkey}"
+        style="${isChosen?`border-color:${color};background:color-mix(in srgb,${color} 8%,transparent)`:''}">
+        <div class="mst-effect-name" style="${isChosen?`color:${color}`:''}">
+          ${ef.nom}
+          ${isChosen?`<span class="mst-chosen-badge" style="background:${color}">Sélectionné</span>`:''}
+        </div>
+        <div class="mst-effect-desc">${parseRichText(ef.description.replace(/\n/g,'<br>'))}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if(card.regle){
+    html += `<div class="mst-regle"><strong>Règle de progression</strong> : ${card.regle}</div>`;
+  }
 
   container.innerHTML = html;
 
+  // ── Événements ────────────────────────────────────────────────────────────
   const picker = document.getElementById('mastery-branch-picker');
-  if(picker){
-    picker.addEventListener('change', (e) => {
-      masteryBranchFilter = e.target.value;
+  if(picker) picker.addEventListener('change', e => { masteryBranchFilter = e.target.value; renderMasteryView(); });
+
+  container.querySelectorAll('.mst-tier-nav-item').forEach(el => {
+    el.addEventListener('click', () => {
+      _masteryActiveTier = parseInt(el.getAttribute('data-tier'));
       renderMasteryView();
     });
-  }
+  });
 
-  container.querySelectorAll('.ec-choice').forEach(el => {
+  // Clic sur nœud SVG ou carte d'effet → sélectionner/désélectionner
+  container.querySelectorAll('[data-eid][data-ckey]').forEach(el => {
     el.addEventListener('click', () => {
-      const key = el.getAttribute('data-choice-key');
-      const effectId = el.getAttribute('data-effect-id');
-      masteryChoices[key] = (masteryChoices[key] === effectId) ? null : effectId;
+      const eid  = el.getAttribute('data-eid');
+      const ckey = el.getAttribute('data-ckey');
+      masteryChoices[ckey] = (masteryChoices[ckey] === eid) ? null : eid;
       renderMasteryView();
-      savePlayerChoices(); // auto-save on every change
+      if(typeof savePlayerChoices === 'function') savePlayerChoices();
     });
   });
 }
@@ -2132,8 +2147,7 @@ function renderTree(){
     const pos = positions[s.id];
     if(!pos) return;
     const div = document.createElement('div');
-    const budgetLocked = isBudgetLocked(s);
-    div.className = 'node ' + (s.etat || 'locked') + (budgetLocked ? ' budget-locked' : '');
+    div.className = 'node ' + (s.etat || 'locked');
     div.style.left = pos.x + 'px';
     div.style.top = pos.y + 'px';
     div.style.transform = 'translate(-50%, -50%)';
@@ -2179,50 +2193,10 @@ function renderIcon(icone){
   return icone;
 }
 
-function getPointsDepenses(skills){
-  return skills
-    .filter(s => s.etat === 'unlocked' && (s.cout || 0) > 0)
-    .reduce((sum, s) => sum + (s.cout || 0), 0);
-}
-
-function getPointsRestants(){
-  return playerProfile.points_total - getPointsDepenses(currentSkills());
-}
-
-function isBudgetLocked(skill){
-  if(skill.etat !== 'available') return false;
-  if(playerProfile.points_total === 0 && playerProfile.points_max === 999) return false;
-  return getPointsRestants() < (skill.cout || 0);
-}
-
 function updatePointsDisplay(skills){
-  const depenses = getPointsDepenses(skills);
-  const total    = playerProfile.points_total;
-  const max      = playerProfile.points_max;
-  const restants = total - depenses;
-  const pct      = total > 0 ? Math.min(100, Math.round(depenses / total * 100)) : 0;
-
-  const display = document.getElementById('points-display');
-  const bar     = document.getElementById('points-bar-fill');
-
-  if(total === 0 && max === 999){
-    // Pas de profil joueur → mode démo, affichage simple
-    const unlocked = skills.filter(s => s.etat === 'unlocked').length;
-    display.textContent = `${unlocked} / ${skills.length} compétences débloquées`;
-    display.className = 'points';
-    if(bar) bar.style.width = '0%';
-    return;
-  }
-
-  display.textContent = `${depenses} / ${total} pts dépensés (max ${max})`;
-  display.className = 'points'
-    + (restants <= 0 ? ' budget-full' : restants <= 2 ? ' budget-warning' : '');
-
-  if(bar){
-    bar.style.width = pct + '%';
-    bar.className   = 'points-bar-fill'
-      + (pct >= 100 ? ' full' : pct >= 80 ? ' almost-full' : '');
-  }
+  const unlocked = skills.filter(s => s.etat === 'unlocked').length;
+  const total = skills.length;
+  document.getElementById('points-display').textContent = `${unlocked} / ${total} compétences débloquées`;
 }
 
 function statusLabel(etat){
