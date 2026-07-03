@@ -2086,17 +2086,20 @@ function buildLayout(skills){
   }
   Object.keys(byBranche).forEach(key => computeStartTier(key));
 
-  // place nodes: X = column (branch index), Y = tier (niveau + branch start tier)
-  // Le niveau interne d'un fork commence souvent à 1 (pas 0), donc on normalise
-  // en soustrayant le niveau minimum de la branche pour que le premier nœud
-  // se place pile à startTier.
+  // Extraire le tier absolu depuis le suffixe numérique de l'ID.
+  // Ex: evo_te_0 → 0, evo_lp_1 → 1, evo_lp_2 → 2, evo_tc_5 → 5
+  // Cela découple le tier affiché de la colonne "niveau/tier" du Sheet.
+  function tierFromId(id){
+    const match = (id || '').match(/(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  // place nodes: X = column (branch index), Y = tier extrait de l'ID
   Object.keys(byBranche).forEach(brancheKey => {
     const col = brancheCol[brancheKey];
-    const startTier = brancheStartTier[brancheKey];
     const list = byBranche[brancheKey];
-    const minNiveau = Math.min(...list.map(s => s.niveau));
     list.forEach(s => {
-      const tier = startTier + (s.niveau - minNiveau);
+      const tier = tierFromId(s.id);
       const x = LEFT_PADDING + col * BRANCH_GAP;
       const y = TOP_PADDING + tier * TIER_GAP;
       positions[s.id] = { x, y, brancheKey, col, tier };
