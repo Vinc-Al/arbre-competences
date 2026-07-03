@@ -1374,14 +1374,30 @@ function parseCSV(text){
   if(field.length || row.length){ row.push(field); rows.push(row); }
   if(!rows.length) return [];
   const headers = rows[0].map(h => h.trim().toLowerCase());
+
+  // Alias de colonnes : le Sheet DATA Système utilise des noms différents
+  // du format interne attendu par le code.
+  const COLUMN_ALIASES = {
+    'tier':          'niveau',     // Sheet: tier → interne: niveau
+    'cout_points':   'cout',       // Sheet: cout_points → interne: cout
+    'etat_defaut':   'etat',       // Sheet: etat_defaut → interne: etat
+    'accessible':    '_accessible', // pas utilisé directement, mais préservé
+  };
+
   return rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => {
     const obj = {};
-    headers.forEach((h, idx) => obj[h] = (r[idx] ?? '').trim());
+    headers.forEach((h, idx) => {
+      const key = COLUMN_ALIASES[h] || h;
+      // Ne pas écraser une valeur déjà remplie (ex: si "niveau" ET "tier" existent tous les deux)
+      if(!obj[key]) obj[key] = (r[idx] ?? '').trim();
+    });
     obj.niveau = parseInt(obj.niveau, 10) || 0;
-    obj.cout = parseInt(obj.cout, 10) || 0;
+    obj.cout   = parseInt(obj.cout, 10) || 0;
     if(!obj.ecole) obj.ecole = 'default';
+    // Filtrer les lignes qui sont des sections vides (première colonne = texte en majuscules type "TRAIT ÉNERGÉTIQUE")
+    if(!obj.id && obj.branche && obj.branche === obj.branche.toUpperCase()) return null;
     return obj;
-  });
+  }).filter(obj => obj !== null);
 }
 
 async function fetchCSV(url){
@@ -2071,12 +2087,16 @@ function buildLayout(skills){
   Object.keys(byBranche).forEach(key => computeStartTier(key));
 
   // place nodes: X = column (branch index), Y = tier (niveau + branch start tier)
+  // Le niveau interne d'un fork commence souvent à 1 (pas 0), donc on normalise
+  // en soustrayant le niveau minimum de la branche pour que le premier nœud
+  // se place pile à startTier.
   Object.keys(byBranche).forEach(brancheKey => {
     const col = brancheCol[brancheKey];
     const startTier = brancheStartTier[brancheKey];
     const list = byBranche[brancheKey];
+    const minNiveau = Math.min(...list.map(s => s.niveau));
     list.forEach(s => {
-      const tier = startTier + s.niveau;
+      const tier = startTier + (s.niveau - minNiveau);
       const x = LEFT_PADDING + col * BRANCH_GAP;
       const y = TOP_PADDING + tier * TIER_GAP;
       positions[s.id] = { x, y, brancheKey, col, tier };
