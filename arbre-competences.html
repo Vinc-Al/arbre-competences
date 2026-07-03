@@ -270,115 +270,91 @@
   #canvas-wrap.hidden{ display:none; }
 
   .mastery-empty{
-    color:var(--text-1); font-family:'Inter',sans-serif;
-    font-size:0.9rem; text-align:center; margin-top:60px;
+    color:var(--text-1);
+    font-family:'Inter', sans-serif;
+    font-size:0.9rem;
+    text-align:center;
+    margin-top:60px;
   }
+
   .mastery-branch-select{
-    margin-bottom:16px; display:flex; align-items:center; gap:10px;
+    margin-bottom:22px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
   }
-  .mastery-branch-select label{ font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--text-1); }
+  .mastery-branch-select label{
+    font-family:'Inter', sans-serif;
+    font-size:0.78rem;
+    color:var(--text-1);
+  }
   .mastery-branch-select select{
-    font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--text-0);
-    background:rgba(255,255,255,0.05); border:1px solid var(--line-dim);
-    border-radius:6px; padding:5px 10px;
+    font-family:'Inter', sans-serif;
+    font-size:0.82rem;
+    color:var(--text-0);
+    background:rgba(255,255,255,0.05);
+    border:1px solid var(--line-dim);
+    border-radius:6px;
+    padding:6px 10px;
   }
 
   /* ── Navigation des tiers (T0→T1→T2→T3) ── */
-  .mst-tier-nav{
-    display:flex; align-items:center; gap:0;
-    margin-bottom:24px; padding:16px 0;
-  }
+  .mst-tier-nav{ display:flex; align-items:center; margin-bottom:22px; padding:14px 0; }
   .mst-tier-nav-item{
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    min-width:80px; padding:10px 14px; border-radius:10px;
-    border:1.5px solid var(--line-dim); cursor:pointer;
-    background:rgba(255,255,255,0.02); position:relative;
+    min-width:78px; padding:9px 13px; border-radius:10px;
+    border:1.5px solid var(--line-dim); cursor:pointer; position:relative;
+    background:rgba(255,255,255,0.02);
     transition:border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     user-select:none;
   }
   .mst-tier-nav-item:hover{ background:rgba(255,255,255,0.05); }
-  .mst-tier-nav-item.active{ background:rgba(255,255,255,0.04); }
-  .mst-tier-nav-label{
-    font-family:'Cinzel',serif; font-size:1rem; font-weight:700;
-    color:var(--text-1); transition:color 0.2s ease;
-  }
-  .mst-tier-nav-name{
-    font-family:'Inter',sans-serif; font-size:0.7rem;
-    color:var(--text-1); white-space:nowrap;
-  }
-  .mst-tier-chosen-dot{
-    position:absolute; top:-5px; right:-5px;
-    width:10px; height:10px; border-radius:50%;
-    border:2px solid var(--bg-0);
-  }
-  .mst-tier-connector{
-    flex:1; height:2px; opacity:0.5; min-width:20px;
-    transition:background 0.3s ease;
-  }
+  .mst-tier-nav-label{ font-family:'Cinzel',serif; font-size:1rem; font-weight:700; color:var(--text-1); transition:color 0.2s ease; }
+  .mst-tier-nav-name{ font-family:'Inter',sans-serif; font-size:0.68rem; color:var(--text-1); white-space:nowrap; }
+  .mst-tier-chosen-dot{ position:absolute; top:-5px; right:-5px; width:10px; height:10px; border-radius:50%; border:2px solid var(--bg-0); }
+  .mst-tier-connector{ flex:1; height:2px; opacity:0.5; min-width:16px; transition:background 0.3s ease; }
 
   /* ── Titre du tier actif ── */
-  .mst-tier-header{
-    display:flex; flex-direction:column; gap:5px; margin-bottom:14px;
-  }
-  .mst-tier-title{
-    font-family:'Cinzel','Spectral',Georgia,serif;
-    font-size:1rem; letter-spacing:0.06em; font-weight:600;
-  }
-  .mst-tier-intro{
-    font-family:'Inter',sans-serif; font-size:0.8rem;
-    color:var(--text-1); line-height:1.45;
-  }
+  .mst-tier-header{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px; }
+  .mst-tier-title{ font-family:'Cinzel','Spectral',Georgia,serif; font-size:1rem; letter-spacing:0.06em; font-weight:600; }
+  .mst-tier-intro{ font-family:'Inter',sans-serif; font-size:0.8rem; color:var(--text-1); line-height:1.45; }
 
   /* ── Diagramme éclaté SVG ── */
-  .mst-diagram-wrap{
-    display:flex; justify-content:center;
-    margin-bottom:20px;
-  }
-  .mst-diagram-svg{
-    width:100%; max-width:600px; height:auto;
-    overflow:visible;
-  }
+  .mst-diagram-wrap{ display:flex; justify-content:center; margin-bottom:18px; }
+  .mst-diagram-svg{ width:100%; max-width:620px; height:auto; overflow:visible; }
   .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
-  .mst-node-svg:hover circle{ opacity:0.85; }
-  .mst-no-effects{
-    font-family:'Inter',sans-serif; font-size:0.82rem;
-    color:var(--text-1); text-align:center; padding:20px;
-  }
+  .mst-node-svg:hover circle{ opacity:0.82; }
+  .mst-no-effects{ font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--text-1); text-align:center; padding:20px; }
 
   /* ── Fiches d'effets ── */
-  .mst-effects-row{
-    display:flex; gap:12px; flex-wrap:wrap;
-  }
+  .mst-effects-row{ display:flex; gap:12px; flex-wrap:wrap; }
   .mst-effect-card{
-    flex:1 1 200px; min-width:180px;
-    background:rgba(255,255,255,0.02);
-    border:1.5px solid var(--line-dim);
-    border-radius:10px; padding:13px 15px;
-    cursor:pointer;
-    transition:border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    flex:1 1 200px; min-width:180px; background:rgba(255,255,255,0.02);
+    border:1.5px solid var(--line-dim); border-radius:10px; padding:13px 15px;
+    cursor:pointer; transition:border-color 0.15s ease, background 0.15s ease;
   }
   .mst-effect-card:hover{ background:rgba(255,255,255,0.04); }
-  .mst-effect-card.chosen{ box-shadow:0 0 14px rgba(0,0,0,0.3); }
   .mst-effect-name{
-    font-family:'Inter',sans-serif; font-weight:700;
-    font-size:0.85rem; text-decoration:underline;
-    color:var(--text-0); margin-bottom:7px;
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    font-family:'Inter',sans-serif; font-weight:700; font-size:0.85rem;
+    color:var(--text-0); margin-bottom:7px; display:flex; align-items:center; gap:7px; flex-wrap:wrap;
   }
-  .mst-chosen-badge{
-    font-size:0.62rem; font-weight:600; text-decoration:none;
-    padding:2px 7px; border-radius:999px; color:#0a0e14;
-    letter-spacing:0.04em;
+  .mst-effect-emoji{ font-size:1rem; }
+  .mst-effect-icon-img{
+    width:20px; height:20px; object-fit:contain;
+    border-radius:4px; vertical-align:middle;
   }
-  .mst-effect-desc{
-    font-family:'Inter',sans-serif; font-size:0.78rem;
-    color:var(--text-0); line-height:1.5; opacity:0.9;
+  .mst-effect-branche{
+    font-family:'Inter',sans-serif; font-size:0.68rem;
+    color:var(--arcane-glow); background:rgba(111,168,255,0.08);
+    border:1px solid rgba(111,168,255,0.25); border-radius:5px;
+    padding:2px 8px; margin-bottom:8px; display:inline-block;
   }
+  .mst-chosen-badge{ font-size:0.62rem; font-weight:700; padding:1px 7px; border-radius:999px; color:#0a0e14; }
+  .mst-effect-desc{ font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--text-0); line-height:1.5; opacity:0.9; }
   .mst-regle{
-    font-family:'Inter',sans-serif; font-size:0.74rem;
-    color:var(--text-1); font-style:italic;
-    text-align:center; margin-top:18px; padding-top:14px;
-    border-top:1px solid var(--line-dim);
+    font-family:'Inter',sans-serif; font-size:0.74rem; color:var(--text-1);
+    font-style:italic; text-align:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line-dim);
   }
 
   #canvas-wrap{
@@ -593,20 +569,21 @@
     font-weight:700;
     text-decoration:underline;
   }
-  #panel mark.color-element{ background:none; color:#d68ae0; font-style:italic; font-weight:600; }
-  #panel mark.color-feu{ background:none; color:#e0793f; font-style:italic; font-weight:600; }
-  #panel mark.color-glace{ background:none; color:#6fa8ff; font-style:italic; font-weight:600; }
-  #panel mark.color-froid{ background:none; color:#6fa8ff; font-style:italic; font-weight:600; }
-  #panel mark.color-foudre{ background:none; color:#e0d65f; font-style:italic; font-weight:600; }
-  #panel mark.color-ombre{ background:none; color:#a99bd1; font-style:italic; font-weight:600; }
-  #panel mark.color-lumiere{ background:none; color:#f3e6a8; font-style:italic; font-weight:600; }
-  #panel mark.color-necrotique{ background:none; color:#7ea85a; font-style:italic; font-weight:600; }
-  #panel mark.color-nature{ background:none; color:#5fd685; font-style:italic; font-weight:600; }
-  #panel mark.color-soin{ background:none; color:#4fd17e; font-style:italic; font-weight:600; }
-  #panel mark.color-poison{ background:none; color:#8fd14f; font-style:italic; font-weight:600; }
-  #panel mark.color-acide{ background:none; color:#8fd14f; font-style:italic; font-weight:600; }
-  #panel mark.color-special{ background:none; color:#e08ac0; font-weight:700; }
-  #panel mark.color-danger{ background:none; color:#e0593f; font-weight:700; }
+  mark.color-element{ background:none; color:#d68ae0; font-style:italic; font-weight:600; }
+  mark.color-feu{ background:none; color:#e0593f; font-style:italic; font-weight:600; }
+  mark.color-glace{ background:none; color:#6fa8ff; font-style:italic; font-weight:600; }
+  mark.color-froid{ background:none; color:#6fa8ff; font-style:italic; font-weight:600; }
+  mark.color-foudre{ background:none; color:#e0d65f; font-style:italic; font-weight:600; }
+  mark.color-ombre{ background:none; color:#a99bd1; font-style:italic; font-weight:600; }
+  mark.color-lumiere{ background:none; color:#f3e6a8; font-style:italic; font-weight:600; }
+  mark.color-necrotique{ background:none; color:#7ea85a; font-style:italic; font-weight:600; }
+  mark.color-nature{ background:none; color:#5fd685; font-style:italic; font-weight:600; }
+  mark.color-soin{ background:none; color:#4fd17e; font-style:italic; font-weight:600; }
+  mark.color-poison{ background:none; color:#8fd14f; font-style:italic; font-weight:600; }
+  mark.color-acide{ background:none; color:#8fd14f; font-style:italic; font-weight:600; }
+  mark.color-special{ background:none; color:#e08ac0; font-weight:700; }
+  mark.color-physique{ background:none; color:#7ab8d4; font-weight:600; }
+  mark.color-danger{ background:none; color:#e0593f; font-weight:700; }
   #panel .stat-row{
     display:flex; justify-content:space-between; padding:8px 0;
     border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.85rem;
@@ -1069,27 +1046,27 @@ const ELEMENT_MASTERY = {
       { id:"feu_t0_primal",        nom:"Feu primal",             branches:"*",
         description:"**Maîtrise par défaut** : Vos dégâts infligent des dégâts de [feu](feu)." },
       { id:"feu_t0_eclats",        nom:"Éclats rougeoyants",     branches:"*",
-        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **perçant**." },
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et [perçant](physique)." },
       { id:"feu_t0_magmatique",    nom:"Bloc magmatique",        branches:"*",
-        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **contondant**." },
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et [contondant](physique)." },
       { id:"feu_t0_lame",          nom:"Lame pyroplastique",     branches:"*",
-        description:"Vos dégâts sont divisés en deux sources [feu](feu) et **tranchant**." },
+        description:"Vos dégâts sont divisés en deux sources [feu](feu) et [tranchant](physique)." },
       { id:"feu_t0_pyroplastique", nom:"Détonation pyroplastique", branches:"*",
         description:"Vos dégâts sont divisés en deux sources [feu](feu) et [force](special)." },
     ],
     // ── T1 — Brasier ──────────────────────────────────────────────────────
     [
       { id:"feu_t1_incineration",  nom:"Incinération",           branches:"lien_persistant,arc_elementaire",
-        description:"Vos sorts **[Lien persistant I]** et **[Arc élémentaire I]** déclenchent des explosions. Toute créature se trouvant dans la zone d'effet doit faire un jet de sauvegarde ou subir la moitié des dégâts du sort concerné." },
+        description:"Vos sorts **[Lien persistant I+]** et **[Arc élémentaire I+]** déclenchent des explosions **3 mètres** autour de la cible principale du sort. Toute créature se trouvant dans la zone d'effet doit faire un jet de sauvegarde ou subir la moitié des dégâts du sort concerné." },
       { id:"feu_t1_brulure",       nom:"Brûlure",                branches:"*",
-        description:"Vous appliquez des dégâts supplémentaires au prochain sort de feu que vous lancez sur la cible à **X×1d6** (X = Rank du sort) marqué par la brûlure.\n\n**OU [Brûlure amplifiée] — [Trait corrosif I]** : L'effet de brûlure change et vos charges de corrosions appliquent **2 dégâts** supplémentaires par tours." },
+        description:"Vous appliquez des dégâts supplémentaire au prochain sort de [feu](feu) que vous lancez sur la cible à **Xd6** (X = Rank du sort) marquée par la brûlure.\n\n**OU**\n\n**[Brûlure amplifiée] – [Trait corrosif I+]** : L'effet de brûlure change et vos charges de corrosions appliquent **2 dégâts** supplémentaires par tours." },
     ],
     // ── T2 — Inferno ──────────────────────────────────────────────────────
     [
       { id:"feu_t2_afflux",        nom:"Afflux de destruction",  branches:"eclats_energie",
         description:"**[Éclats d'énergie I+]** génère un projectile supplémentaire." },
       { id:"feu_t2_attiser",       nom:"Attiser la flamme",      branches:"*",
-        description:"**[Châtiment I+]** inflige une brûlure entretenue par votre **[Concentration]** qui inflige **1d8** dégâts de [feu](feu) par tours.\n\n**OU [Nova I+]** et **[Nova canalisée I+]** infligent **2 dégâts** supplémentaires à l'ennemi subissant le jet de dégâts par ennemis touchés ce tour." },
+        description:"**[Châtiment I+]** inflige un brulure entretenue par votre **[Concentration]** qui inflige **1d8** dégâts de [feu](feu) par tours.\n\n**OU**\n\n**[Nova I+]** et **[Nova canalisée I+]** infligent **2 dégâts** supplémentaires à l'ennemi subissant le jet de dégâts par ennemis touchés ce tour." },
     ],
     // ── T3 — Cataclysme ───────────────────────────────────────────────────
     [
@@ -1098,7 +1075,7 @@ const ELEMENT_MASTERY = {
       { id:"feu_t3_assecher",      nom:"Assécher",               branches:"intrusion_magique",
         description:"**[Intrusion magique I+]** impose le désavantage systématique aux jets de sauvegarde de la **Cible**." },
       { id:"feu_t3_scorie",        nom:"Scorie",                 branches:"*",
-        description:"Vos sorts **ignorent les résistances** au [feu](feu) de la Cible. Les immunités sont traitées comme des résistances." },
+        description:"Vos sorts **ignorent les résistances au [feu](feu)** de la Cible, les immunités sont traitées comme des résistances." },
     ],
   ],
   froid:       [[],[],[],[]],
@@ -1373,8 +1350,12 @@ async function fetchCSV(url){
 function parseElementsCSV(rows){
   // Builds ELEMENT_THEMES, ELEMENT_CARDS, ELEMENT_MASTERY from the
   // "elements" sheet. Each row is one mastery effect.
-  // Columns: element_key | element_label | element_color | carte_titre |
-  //          carte_intro | tier | effet_id | effet_nom | branches | description
+  // Colonnes : element_key | element_label | element_color | carte_titre |
+  //            carte_intro | tier | tier_nom | effet_id | effet_nom |
+  //            branches | description | icone
+  //
+  // La colonne "icone" accepte : un emoji (🔥), une URL complète
+  // (https://.../feu.png) ou un chemin relatif dans le repo (icones/feu.png).
   const themes = {};
   const cards = {};
   const mastery = {};
@@ -1386,17 +1367,27 @@ function parseElementsCSV(rows){
       themes[key] = { label: r.element_label || key, color: r.element_color || '#9aa4b8' };
     }
     if(!cards[key]){
-      cards[key] = { titre: r.carte_titre || key, intro: r.carte_intro || '' };
+      cards[key] = {
+        titre: r.carte_titre || key,
+        intro: r.carte_intro || '',
+        tiers_noms: [],
+        regle: r.carte_regle || '',
+      };
     }
     if(!mastery[key]) mastery[key] = [[],[],[],[]];
     const tier = parseInt(r.tier, 10);
     if(isNaN(tier) || tier < 0 || tier > 3) return;
-    if(!r.effet_id) return; // header row or empty
+    // Nom du tier (Étincelle, Brasier...) — pris sur la 1re ligne de chaque tier
+    if(r.tier_nom && !cards[key].tiers_noms[tier]){
+      cards[key].tiers_noms[tier] = r.tier_nom;
+    }
+    if(!r.effet_id) return; // ligne d'en-tête ou vide
     mastery[key][tier].push({
       id: r.effet_id,
       nom: r.effet_nom || r.effet_id,
       branches: r.branches || '*',
       description: r.description || '',
+      icone: r.icone || '',   // emoji, URL ou chemin relatif
     });
   });
 
@@ -1694,12 +1685,12 @@ function toggleMasteryView(forceOpen){
 }
 document.getElementById('mastery-toggle-btn').addEventListener('click', () => toggleMasteryView());
 
-/* État local de la vue maîtrise */
-let _masteryActiveTier = 0; // tier actuellement affiché dans le diagramme éclaté
+/* État local : tier actuellement affiché dans le diagramme éclaté */
+let _masteryActiveTier = 0;
 
 function renderMasteryView(){
   const container = document.getElementById('mastery-view');
-  const branches  = getBranchesForCurrentSchool();
+  const branches = getBranchesForCurrentSchool();
   if(!masteryBranchFilter || !branches.includes(masteryBranchFilter)){
     masteryBranchFilter = branches[0] || null;
   }
@@ -1711,35 +1702,20 @@ function renderMasteryView(){
   }
 
   const { key: groupKey, theme, card, tiers } = group;
-  const tierNoms = card.tiers_noms || tiers.map((_,i) => `Tier ${i}`);
+  const tierNoms = card.tiers_noms || tiers.map((_,i)=>`Tier ${i}`);
   const color = theme.color;
-
-  // Clamp le tier actif
   if(_masteryActiveTier >= tiers.length) _masteryActiveTier = 0;
 
-  // ── Sélecteur de branche ────────────────────────────────────────────────
   let html = '';
-  if(branches.length){
-    html += `<div class="mastery-branch-select">
-      <label for="mastery-branch-picker">Branche :</label>
-      <select id="mastery-branch-picker">
-        ${branches.map(b=>`<option value="${b}" ${b===masteryBranchFilter?'selected':''}>${b.replace(/_/g,' ')}</option>`).join('')}
-      </select>
-    </div>`;
-  }
 
-  // ── Navigation des tiers (ligne horizontale T0→T1→T2→T3) ───────────────
+  // Navigation des tiers T0→T1→T2→T3
   html += `<div class="mst-tier-nav">`;
-  tiers.forEach((_,ti) => {
+  tiers.forEach((_,ti)=>{
     const active = ti === _masteryActiveTier;
-    const ckey   = `${groupKey}_t${ti}`;
-    const chosen = masteryChoices[ckey];
-    const relevant = tiers[ti].filter(ef => effectAppliesToBranch(ef, masteryBranchFilter));
-    const hasChoice = !!chosen && relevant.some(ef => ef.id === chosen);
-    html += `<div class="mst-tier-nav-item ${active?'active':''} ${hasChoice?'has-choice':''}"
-      data-tier="${ti}"
-      style="${active?`border-color:${color};box-shadow:0 0 12px ${color}55`:''}
-             ${hasChoice&&!active?`border-color:${color}88`:''}">
+    const ckey = `${groupKey}_t${ti}`;
+    const hasChoice = !!masteryChoices[ckey] && tiers[ti].some(ef=>ef.id===masteryChoices[ckey]);
+    html += `<div class="mst-tier-nav-item ${active?'active':''}" data-tier="${ti}"
+      style="${active?`border-color:${color};box-shadow:0 0 12px ${color}55`:hasChoice?`border-color:${color}88`:''}">
       <span class="mst-tier-nav-label" style="${active?`color:${color}`:hasChoice?`color:${color}99`:''}">T${ti}</span>
       <span class="mst-tier-nav-name">${tierNoms[ti]}</span>
       ${hasChoice?`<span class="mst-tier-chosen-dot" style="background:${color}"></span>`:''}
@@ -1750,107 +1726,117 @@ function renderMasteryView(){
   });
   html += `</div>`;
 
-  // ── Titre du tier actif ──────────────────────────────────────────────────
-  const activeTierEffects = tiers[_masteryActiveTier].filter(ef => effectAppliesToBranch(ef, masteryBranchFilter));
-  const activeCkey = `${groupKey}_t${_masteryActiveTier}`;
-  const activeChosen = masteryChoices[activeCkey];
-
+  // Titre du tier actif
   html += `<div class="mst-tier-header">
     <span class="mst-tier-title" style="color:${color}">${card.titre} — T${_masteryActiveTier} · ${tierNoms[_masteryActiveTier]}</span>
     <span class="mst-tier-intro">${parseRichText(card.intro)}</span>
   </div>`;
 
-  // ── Diagramme éclaté style D4 ────────────────────────────────────────────
-  // Construit en SVG : nœud central + nœuds d'effets disposés en étoile
-  const SVG_W = 600, SVG_H = 320;
-  const CX = SVG_W / 2, CY = SVG_H / 2;
-  const RADIUS = 115; // distance centre→nœuds effets
-  const NODE_R  = 30; // rayon des nœuds effets
-  const CENTER_R = 40;
+  // Tous les effets du tier sont affichés (plus de filtrage par branche).
+  const activeEffects = tiers[_masteryActiveTier];
+  const activeCkey = `${groupKey}_t${_masteryActiveTier}`;
+  const activeChosen = masteryChoices[activeCkey];
 
-  const n = activeTierEffects.length;
-  // Angles répartis : si un seul effet, à droite; sinon étalés en éventail
-  function getAngle(i, total){
-    if(total === 1) return -Math.PI / 2; // haut
-    const span = total <= 3 ? Math.PI : 2 * Math.PI * (total-1)/total;
-    const start = -Math.PI/2 - span/2;
-    return start + (span/(total-1||1)) * i;
+  // Étiquette de branche pour un effet restreint (vide si "*")
+  function brancheLabel(ef){
+    if(!ef.branches || ef.branches === '*') return '';
+    return ef.branches.split(',').map(b => b.trim().replace(/_/g,' ')).join(', ');
   }
 
-  let svgNodes = [];
-  activeTierEffects.forEach((ef, i) => {
-    const angle = getAngle(i, n);
-    const nx = CX + RADIUS * Math.cos(angle);
-    const ny = CY + RADIUS * Math.sin(angle);
-    const isChosen = activeChosen === ef.id;
-    svgNodes.push({ ef, nx, ny, isChosen, angle });
+  // Diagramme éclaté style D4
+  const SVG_W=620, SVG_H=340, CX=SVG_W/2, CY=SVG_H/2;
+  const RADIUS=120, NODE_R=26, CENTER_R=42;
+  const n = activeEffects.length;
+
+  function getAngle(i,total){
+    if(total===1) return -Math.PI/2;
+    const span = total<=4 ? Math.PI*1.1 : 2*Math.PI*(total-1)/total;
+    const start = -Math.PI/2 - span/2;
+    return start + (span/(total-1||1))*i;
+  }
+
+  // Fallback emoji si le Sheet ne fournit pas d'icône (colonne "icone" vide)
+  const EFFECT_EMOJI_FALLBACK = {
+    feu_t0_primal:'🔥', feu_t0_eclats:'🎇', feu_t0_magmatique:'🪨', feu_t0_lame:'⚔️', feu_t0_pyroplastique:'💥',
+    feu_t1_incineration:'☄️', feu_t1_brulure:'🔥',
+    feu_t2_afflux:'✨', feu_t2_attiser:'🌋',
+    feu_t3_conflagration:'🎲', feu_t3_assecher:'🌵', feu_t3_scorie:'⛓️',
+  };
+  // Retourne l'icône à utiliser pour un effet : priorité au Sheet (ef.icone),
+  // sinon fallback emoji, sinon "❓".
+  function effectIcon(ef){
+    return ef.icone || EFFECT_EMOJI_FALLBACK[ef.id] || '❓';
+  }
+  // Une icône est une image si c'est une URL ou un chemin avec extension image.
+  function iconIsImage(ic){
+    if(!ic) return false;
+    if(ic.startsWith('http://') || ic.startsWith('https://')) return true;
+    return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(ic);
+  }
+
+  const nodes = activeEffects.map((ef,i)=>{
+    const a=getAngle(i,n);
+    return { ef, nx:CX+RADIUS*Math.cos(a), ny:CY+RADIUS*Math.sin(a), a, isChosen:activeChosen===ef.id };
   });
 
-  html += `<div class="mst-diagram-wrap">
-    <svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="glow-${groupKey}">
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>`;
+  html += `<div class="mst-diagram-wrap"><svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
+    <defs><filter id="glow-${groupKey}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
 
-  // Lignes centre→nœuds
-  svgNodes.forEach(({nx, ny, isChosen}) => {
-    const lc = isChosen ? color : '#2a3344';
-    const op = isChosen ? '0.9' : '0.45';
-    const dashed = !isChosen ? 'stroke-dasharray="5 4"' : '';
+  // Lignes centre→effets
+  nodes.forEach(({nx,ny,isChosen})=>{
     html += `<line x1="${CX}" y1="${CY}" x2="${nx}" y2="${ny}"
-      stroke="${lc}" stroke-width="${isChosen?2.5:1.5}" opacity="${op}" ${dashed}/>`;
+      stroke="${isChosen?color:'#2a3344'}" stroke-width="${isChosen?2.5:1.5}"
+      opacity="${isChosen?0.9:0.4}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
   });
 
-  // Nœud central (tier)
-  html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}"
-    fill="#0f1520" stroke="${color}" stroke-width="2.5"
-    filter="url(#glow-${groupKey})"/>
-  <text x="${CX}" y="${CY-8}" text-anchor="middle" fill="${color}"
-    font-family="Cinzel,serif" font-size="14" font-weight="bold">T${_masteryActiveTier}</text>
-  <text x="${CX}" y="${CY+10}" text-anchor="middle" fill="${color}99"
-    font-family="Inter,sans-serif" font-size="9">${tierNoms[_masteryActiveTier]}</text>`;
+  // Nœud central
+  html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#glow-${groupKey})"/>
+    <text x="${CX}" y="${CY-6}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="15" font-weight="bold">T${_masteryActiveTier}</text>
+    <text x="${CX}" y="${CY+11}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${tierNoms[_masteryActiveTier]}</text>`;
 
-  // Nœuds d'effets
-  svgNodes.forEach(({ef, nx, ny, isChosen}) => {
-    const fc  = isChosen ? color+'33' : '#1b2230';
-    const sc  = isChosen ? color : '#3a4253';
-    const tc  = isChosen ? color : '#9aa4b8';
-    const sw  = isChosen ? 2.5 : 1.5;
-    const filt= isChosen ? `filter="url(#glow-${groupKey})"` : '';
-    // Tronquer le nom à 12 chars pour le SVG
-    const shortName = ef.nom.length > 12 ? ef.nom.slice(0,11)+'…' : ef.nom;
-    html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${activeCkey}" style="cursor:pointer">
-      <circle cx="${nx}" cy="${ny}" r="${NODE_R}"
-        fill="${fc}" stroke="${sc}" stroke-width="${sw}" ${filt}/>
-      <text x="${nx}" y="${ny+4}" text-anchor="middle" fill="${tc}"
-        font-family="Inter,sans-serif" font-size="8.5" font-weight="${isChosen?'700':'400'}">
-        ${shortName.split(' ').map((w,wi) =>
-          `<tspan x="${nx}" dy="${wi===0?-4:11}">${w}</tspan>`
-        ).join('')}
-      </text>
+  // Nœuds d'effets : cercle avec icône (image ou emoji) au centre, NOM en dehors
+  nodes.forEach(({ef,nx,ny,a,isChosen})=>{
+    const ic = effectIcon(ef);
+    const fc = isChosen ? color+'2e' : '#1b2230';
+    const sc = isChosen ? color : '#3a4253';
+    const labelDist = NODE_R + 16;
+    const lx = nx + Math.cos(a)*labelDist;
+    const ly = ny + Math.sin(a)*labelDist;
+    const anchor = Math.abs(Math.cos(a)) < 0.35 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end');
+    const tc = isChosen ? color : '#c4ccd8';
+    // Contenu central : image SVG ou texte emoji
+    const iconMarkup = iconIsImage(ic)
+      ? `<image href="${ic.replace(/"/g,'&quot;')}" x="${nx-16}" y="${ny-16}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`
+      : `<text x="${nx}" y="${ny+6}" text-anchor="middle" font-size="18">${ic}</text>`;
+    html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${activeCkey}">
+      <circle cx="${nx}" cy="${ny}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#glow-${groupKey})"`:''}/>
+      ${iconMarkup}
+      <text x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
     </g>`;
   });
 
   html += `</svg></div>`;
 
-  // ── Fiches détail des effets (sous le diagramme) ─────────────────────────
-  if(!activeTierEffects.length){
+  // Fiches détail
+  if(!activeEffects.length){
     html += `<div class="mst-no-effects">Aucun effet disponible pour cette branche à T${_masteryActiveTier}.</div>`;
   } else {
     html += `<div class="mst-effects-row">`;
-    activeTierEffects.forEach(ef => {
-      const isChosen = activeChosen === ef.id;
-      html += `<div class="mst-effect-card ${isChosen?'chosen':''}"
-        data-eid="${ef.id}" data-ckey="${activeCkey}"
+    activeEffects.forEach(ef=>{
+      const isChosen = activeChosen===ef.id;
+      const ic = effectIcon(ef);
+      const iconMarkup = iconIsImage(ic)
+        ? `<img class="mst-effect-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
+        : `<span class="mst-effect-emoji">${ic}</span>`;
+      const blabel = brancheLabel(ef);
+      html += `<div class="mst-effect-card ${isChosen?'chosen':''}" data-eid="${ef.id}" data-ckey="${activeCkey}"
         style="${isChosen?`border-color:${color};background:color-mix(in srgb,${color} 8%,transparent)`:''}">
         <div class="mst-effect-name" style="${isChosen?`color:${color}`:''}">
-          ${ef.nom}
-          ${isChosen?`<span class="mst-chosen-badge" style="background:${color}">Sélectionné</span>`:''}
+          ${iconMarkup}${ef.nom}
+          ${isChosen?`<span class="mst-chosen-badge" style="background:${color}">✓</span>`:''}
         </div>
-        <div class="mst-effect-desc">${parseRichText(ef.description.replace(/\n/g,'<br>'))}</div>
+        ${blabel?`<div class="mst-effect-branche">🔗 ${blabel}</div>`:''}
+        <div class="mst-effect-desc">${parseRichText(ef.description)}</div>
       </div>`;
     });
     html += `</div>`;
@@ -1862,25 +1848,16 @@ function renderMasteryView(){
 
   container.innerHTML = html;
 
-  // ── Événements ────────────────────────────────────────────────────────────
-  const picker = document.getElementById('mastery-branch-picker');
-  if(picker) picker.addEventListener('change', e => { masteryBranchFilter = e.target.value; renderMasteryView(); });
-
-  container.querySelectorAll('.mst-tier-nav-item').forEach(el => {
-    el.addEventListener('click', () => {
-      _masteryActiveTier = parseInt(el.getAttribute('data-tier'));
-      renderMasteryView();
-    });
+  container.querySelectorAll('.mst-tier-nav-item').forEach(el=>{
+    el.addEventListener('click', ()=>{ _masteryActiveTier=parseInt(el.getAttribute('data-tier')); renderMasteryView(); });
   });
 
-  // Clic sur nœud SVG ou carte d'effet → sélectionner/désélectionner
-  container.querySelectorAll('[data-eid][data-ckey]').forEach(el => {
-    el.addEventListener('click', () => {
-      const eid  = el.getAttribute('data-eid');
-      const ckey = el.getAttribute('data-ckey');
-      masteryChoices[ckey] = (masteryChoices[ckey] === eid) ? null : eid;
+  container.querySelectorAll('[data-eid][data-ckey]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const eid=el.getAttribute('data-eid'), ckey=el.getAttribute('data-ckey');
+      masteryChoices[ckey] = (masteryChoices[ckey]===eid) ? null : eid;
       renderMasteryView();
-      if(typeof savePlayerChoices === 'function') savePlayerChoices();
+      if(typeof savePlayerChoices==='function') savePlayerChoices();
     });
   });
 }
@@ -2235,6 +2212,8 @@ function parseRichText(raw){
   });
   // **gras**
   safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // sauts de ligne : \n -> <br> (fait après l'échappement pour ne pas être neutralisé)
+  safe = safe.replace(/\n/g, '<br>');
   return safe;
 }
 
