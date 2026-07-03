@@ -103,16 +103,47 @@
     white-space:nowrap;
   }
   header .player-chip strong{ color:var(--gold-bright); font-weight:600; }
+  #player-class-badge{
+    display:inline-block; font-size:0.68rem; color:var(--text-1);
+    background:rgba(255,255,255,0.06); border:1px solid var(--line-dim);
+    border-radius:4px; padding:1px 7px; margin-left:8px; vertical-align:middle;
+  }
+  .points-block{ display:flex; flex-direction:column; gap:5px; align-items:flex-end; }
+  .points-bar-wrap{ width:170px; height:4px; background:rgba(111,168,255,0.12); border-radius:999px; overflow:hidden; }
+  .points-bar-fill{ height:100%; border-radius:999px; background:var(--arcane-glow); transition:width 0.4s ease, background 0.3s ease; width:0%; }
+  .points-bar-fill.almost-full{ background:#e0c46a; }
+  .points-bar-fill.full{ background:#e08a8a; }
   header .points{
     font-family:'Inter', sans-serif;
     font-size:0.82rem;
     color:var(--arcane-glow);
     border:1px solid rgba(111,168,255,0.3);
-    padding:6px 14px;
+    padding:5px 14px;
     border-radius:999px;
     background:rgba(111,168,255,0.06);
     white-space:nowrap;
   }
+  header .points.budget-warning{ color:#e0c46a; border-color:rgba(224,196,106,0.4); background:rgba(224,196,106,0.06); }
+  header .points.budget-full{ color:#e08a8a; border-color:rgba(224,138,138,0.4); background:rgba(224,138,138,0.06); }
+
+  .node.budget-locked{ opacity:0.4; filter:saturate(0.2); cursor:not-allowed; }
+  .node.budget-locked::after{
+    content:'🔒'; position:absolute; top:-8px; right:-8px;
+    font-size:0.7rem; background:var(--bg-0); border-radius:50%; padding:1px 3px; pointer-events:none;
+  }
+  .node.budget-locked:hover{ transform:translate(-50%,-50%) scale(1.0) !important; }
+
+  .mj-toast{
+    position:fixed; bottom:60px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:rgba(15,21,32,0.96); border:1px solid var(--line-dim); color:var(--text-0);
+    font-family:'Inter',sans-serif; font-size:0.85rem; padding:10px 20px; border-radius:10px;
+    opacity:0; pointer-events:none; transition:opacity 0.2s ease, transform 0.2s ease; z-index:99;
+    box-shadow:0 4px 20px rgba(0,0,0,0.5);
+  }
+  .mj-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .mj-toast.success{ border-color:rgba(138,200,138,0.5); color:#a8d8a8; }
+  .mj-toast.error{ border-color:rgba(224,138,138,0.5); color:#e0b0b0; }
+  .mj-toast.warn{ border-color:rgba(212,175,106,0.5); color:#d4c08a; }
 
   /* School tabs */
   #school-tabs{
@@ -665,8 +696,14 @@
       <div class="subtitle">Données chargées depuis Google Sheets (CSV) — par joueur et par école</div>
     </div>
     <div class="right-block">
-      <div class="player-chip">Joueur : <strong id="player-name">—</strong></div>
-      <div class="points" id="points-display">— points disponibles</div>
+      <div class="player-chip">
+        Joueur : <strong id="player-name">—</strong>
+        <span id="player-class-badge"></span>
+      </div>
+      <div class="points-block">
+        <div class="points-bar-wrap"><div class="points-bar-fill" id="points-bar-fill"></div></div>
+        <div class="points" id="points-display">— points disponibles</div>
+      </div>
     </div>
   </header>
 
@@ -1297,6 +1334,15 @@ let schoolsOrder = [];        // list of school keys in encounter order
 let currentSchool = null;     // active school key
 let zoomLevel = 1;
 
+// Profil joueur chargé depuis le Sheet joueur (lignes type="profil")
+let playerProfile = {
+  classe:       '',
+  niveau:       1,
+  points_total: 0,
+  points_max:   999,
+  tier_max:     999,
+};
+
 let selectedElements = new Set();   // element keys currently checked in the global menu
 let masteryChoices = {};            // `${element}_t${tier}` -> chosen effect id (per element per tier)
 let masteryViewOpen = false;        // whether the "Maîtrise élémentaire" view is showing
@@ -1432,75 +1478,86 @@ async function loadData(){
   let skillsLoaded = false;
   let elementsLoaded = false;
 
-  // --- Load competences (DATA sheet or player sheet) ---
-  const playerCsvUrl = PLAYER_SHEETS[playerName];
-  const competencesUrl = DATA_SHEETS.competences;
-  const skillsUrl = playerCsvUrl || competencesUrl;
-
-  if(skillsUrl){
+  // ─── 1. COMPÉTENCES depuis DATA_SHEETS (toujours la source de référence) ───
+  if(DATA_SHEETS.competences){
     try{
-      const rows = await fetchCSV(skillsUrl);
-      allSkills = rows;
-      skillsLoaded = true;
-    } catch(err){
-      console.warn('Compétences inaccessibles, repli sur démo :', err);
-    }
+      const rows = await fetchCSV(DATA_SHEETS.competences);
+      if(rows.length){ allSkills = rows; skillsLoaded = true; }
+    } catch(err){ console.warn('Compétences DATA inaccessibles :', err); }
   }
   if(!skillsLoaded){
     allSkills = DEMO_DATA;
-    statusEl.textContent = playerName
-      ? `Sheet de ${playerName} inaccessible — démonstration affichée`
-      : 'Mode démonstration — ajoute ?joueur=NomDuJoueur à l\'URL';
+    statusEl.textContent = 'Mode démonstration — Sheet DATA non configuré';
   }
 
-  // --- Load elements from DATA sheet ---
+  // ─── 2. SHEET JOUEUR : profil + états (jamais les compétences) ─────────────
+  // Format 3 colonnes : type | id | valeur
+  //   type=profil : classe / niveau / points_total / points_max / tier_max
+  //   type=sort   : id du sort → unlocked/available/locked
+  const playerCsvUrl = PLAYER_SHEETS[playerName];
+  if(playerCsvUrl){
+    try{
+      const rows = await fetchCSV(playerCsvUrl);
+      const etatMap = {};
+      rows.forEach(r => {
+        const type = (r.type   || '').trim().toLowerCase();
+        const id   = (r.id     || '').trim();
+        const val  = (r.valeur || r.etat || r.value || '').trim();
+        if(!id) return;
+        if(type === 'profil'){
+          if(id === 'classe')            playerProfile.classe       = val;
+          else if(id === 'niveau')       playerProfile.niveau       = parseInt(val,10)||1;
+          else if(id === 'points_total') playerProfile.points_total = parseInt(val,10)||0;
+          else if(id === 'points_max')   playerProfile.points_max   = parseInt(val,10)||999;
+          else if(id === 'tier_max')     playerProfile.tier_max     = parseInt(val,10)||999;
+        } else {
+          // type=sort (ou ancien format 2 colonnes sans type)
+          if(val) etatMap[id] = val;
+        }
+      });
+      if(Object.keys(etatMap).length > 0){
+        allSkills = allSkills.map(s => {
+          const e = etatMap[s.id];
+          return e ? { ...s, etat: e } : s;
+        });
+      }
+      const badge = document.getElementById('player-class-badge');
+      if(badge && playerProfile.classe) badge.textContent = playerProfile.classe;
+    } catch(err){ console.warn('Sheet joueur inaccessible :', err); }
+  }
+
+  // ─── 3. ÉLÉMENTS depuis DATA_SHEETS ────────────────────────────────────────
   if(DATA_SHEETS.elements){
     try{
       const rows = await fetchCSV(DATA_SHEETS.elements);
       const parsed = parseElementsCSV(rows);
-      // Merge into live config objects (override hardcoded defaults)
       Object.assign(ELEMENT_THEMES, parsed.themes);
-      Object.assign(ELEMENT_CARDS, parsed.cards);
+      Object.assign(ELEMENT_CARDS,  parsed.cards);
       Object.assign(ELEMENT_MASTERY, parsed.mastery);
       elementsLoaded = true;
-    } catch(err){
-      console.warn('Éléments inaccessibles, données codées en dur utilisées :', err);
-    }
+    } catch(err){ console.warn('Éléments inaccessibles :', err); }
   }
 
-  // --- Load combos from DATA sheet ---
+  // ─── 4. COMBOS depuis DATA_SHEETS ──────────────────────────────────────────
   if(DATA_SHEETS.combos){
     try{
       const rows = await fetchCSV(DATA_SHEETS.combos);
-      const parsed = parseCombosCSV(rows);
-      Object.assign(ELEMENT_COMBOS, parsed);
-    } catch(err){
-      console.warn('Combos inaccessibles, données codées en dur utilisées :', err);
-    }
+      Object.assign(ELEMENT_COMBOS, parseCombosCSV(rows));
+    } catch(err){ console.warn('Combos inaccessibles :', err); }
   }
 
-  // --- Load player mastery saves ---
-  if(playerCsvUrl){
-    // The player sheet may have a second tab for saves — but for now
-    // mastery saves live in the same tab; filter by a special marker column.
-    // If a dedicated save URL exists (PLAYER_SAVE_SHEETS), load from there.
-    const saveUrl = typeof PLAYER_SAVE_SHEETS !== 'undefined' && PLAYER_SAVE_SHEETS[playerName];
-    if(saveUrl){
-      try{
-        const rows = await fetchCSV(saveUrl);
-        const saved = parsePlayerSavesCSV(rows);
-        Object.assign(masteryChoices, saved);
-      } catch(err){
-        console.warn('Sauvegardes joueur inaccessibles :', err);
-      }
-    }
+  // ─── 5. SAUVEGARDES maîtrise élémentaire ───────────────────────────────────
+  const saveUrl = typeof PLAYER_SAVE_SHEETS !== 'undefined' && PLAYER_SAVE_SHEETS[playerName];
+  if(saveUrl){
+    try{
+      const rows = await fetchCSV(saveUrl);
+      Object.assign(masteryChoices, parsePlayerSavesCSV(rows));
+    } catch(err){ console.warn('Sauvegardes inaccessibles :', err); }
   }
 
-  if(skillsLoaded && elementsLoaded){
-    statusEl.textContent = `Données chargées${playerName ? ' pour ' + playerName : ''} ✓`;
-  } else if(skillsLoaded){
-    statusEl.textContent = `Compétences chargées${playerName ? ' pour ' + playerName : ''} ✓ (éléments : mode démo)`;
-  }
+  statusEl.textContent = skillsLoaded
+    ? `Données chargées${playerName ? ' pour ' + playerName : ''} ✓`
+    : statusEl.textContent;
 }
 
 function schoolTheme(key){
@@ -2124,7 +2181,10 @@ function renderTree(){
     const pos = positions[s.id];
     if(!pos) return;
     const div = document.createElement('div');
-    div.className = 'node ' + (s.etat || 'locked');
+    const budgetLocked = isBudgetLocked(s);
+    const tierMax = playerProfile.tier_max !== undefined ? playerProfile.tier_max : 999;
+    const tierBlocked = s.etat === 'available' && s.niveau > tierMax;
+    div.className = 'node ' + (s.etat || 'locked') + ((budgetLocked||tierBlocked) ? ' budget-locked' : '');
     div.style.left = pos.x + 'px';
     div.style.top = pos.y + 'px';
     div.style.transform = 'translate(-50%, -50%)';
@@ -2133,7 +2193,8 @@ function renderTree(){
       <span class="icon">${renderIcon(s.icone)}</span>
       <span class="node-label">${(s.nom||s.id)}</span>
     `;
-    div.addEventListener('click', () => openPanel(s));
+    div.addEventListener('click', (e) => { e.stopPropagation(); openPanel(s); });
+    div.addEventListener('dblclick', (e) => { e.stopPropagation(); mjUnlock(s); });
     canvas.appendChild(div);
   });
 
@@ -2170,10 +2231,101 @@ function renderIcon(icone){
   return icone;
 }
 
+function getPointsDepenses(skills){
+  return (skills || currentSkills())
+    .filter(s => s.etat === 'unlocked' && (s.cout || 0) > 0)
+    .reduce((sum, s) => sum + (s.cout || 0), 0);
+}
+function getPointsRestants(){
+  return playerProfile.points_total - getPointsDepenses(currentSkills());
+}
+function isBudgetLocked(skill){
+  if(skill.etat !== 'available') return false;
+  if(playerProfile.points_total === 0 && playerProfile.points_max === 999) return false;
+  return getPointsRestants() < (skill.cout || 0);
+}
+
 function updatePointsDisplay(skills){
-  const unlocked = skills.filter(s => s.etat === 'unlocked').length;
-  const total = skills.length;
-  document.getElementById('points-display').textContent = `${unlocked} / ${total} compétences débloquées`;
+  const depenses = getPointsDepenses(skills);
+  const total = playerProfile.points_total;
+  const max = playerProfile.points_max;
+  const restants = total - depenses;
+  const pct = total > 0 ? Math.min(100, Math.round(depenses / total * 100)) : 0;
+  const display = document.getElementById('points-display');
+  const bar = document.getElementById('points-bar-fill');
+
+  if(total === 0 && max === 999){
+    const unlocked = skills.filter(s => s.etat === 'unlocked').length;
+    display.textContent = `${unlocked} / ${skills.length} compétences débloquées`;
+    display.className = 'points';
+    if(bar) bar.style.width = '0%';
+    return;
+  }
+  display.textContent = `${depenses} / ${total} pts · reste ${restants} (max ${max})`;
+  display.className = 'points' + (restants <= 0 ? ' budget-full' : restants <= 2 ? ' budget-warning' : '');
+  if(bar){
+    bar.style.width = pct + '%';
+    bar.className = 'points-bar-fill' + (pct >= 100 ? ' full' : pct >= 80 ? ' almost-full' : '');
+  }
+}
+
+/* ── Déblocage MJ (double-clic sur un nœud available) ── */
+function mjUnlock(skill){
+  if(skill.etat !== 'available'){
+    showToast(skill.etat === 'unlocked' ? 'Déjà débloqué.' : 'Pas encore accessible.', 'warn');
+    return;
+  }
+  const tierMax = playerProfile.tier_max !== undefined ? playerProfile.tier_max : 999;
+  if(skill.niveau > tierMax){
+    showToast(`Tier ${skill.niveau} dépasse le maximum (T${tierMax}) pour cette classe.`, 'error');
+    return;
+  }
+  const cout = skill.cout || 0;
+  if(cout > 0 && getPointsRestants() < cout){
+    showToast(`Points insuffisants : ${getPointsRestants()} restants, ${cout} nécessaires.`, 'error');
+    return;
+  }
+  allSkills = allSkills.map(s => s.id === skill.id ? { ...s, etat: 'unlocked' } : s);
+  allSkills = allSkills.map(s => {
+    if(s.etat !== 'locked') return s;
+    if(s.branche === skill.branche && s.niveau === skill.niveau + 1) return { ...s, etat: 'available' };
+    if(s.parent_id === skill.id) return { ...s, etat: 'available' };
+    return s;
+  });
+  renderTree();
+  showToast(`✓ ${skill.nom} débloqué (${cout} pt${cout!==1?'s':''})`, 'success');
+  saveMjChanges();
+}
+
+function showToast(msg, type){
+  let t = document.getElementById('mj-toast');
+  if(!t){ t = document.createElement('div'); t.id = 'mj-toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.className = 'mj-toast show ' + (type || '');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function saveMjChanges(){
+  const playerName = getPlayerFromURL();
+  if(!playerName || typeof APPS_SCRIPT_URL === 'undefined' || !APPS_SCRIPT_URL) return;
+  const statusEl = document.getElementById('source-status');
+  statusEl.textContent = 'Sauvegarde MJ…';
+  try{
+    const sortsData = {};
+    allSkills.forEach(s => { sortsData[s.id] = s.etat; });
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        joueur: playerName, section: 'sort', data: sortsData,
+        secret: typeof SECRET_KEY !== 'undefined' ? SECRET_KEY : '',
+      }),
+      redirect: 'follow',
+    });
+    const json = await res.json();
+    statusEl.textContent = json.ok ? 'Sauvegardé ✓' : 'Erreur : ' + json.error;
+  } catch(err){ statusEl.textContent = 'Sauvegarde échouée'; console.warn(err); }
 }
 
 function statusLabel(etat){
