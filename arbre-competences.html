@@ -1382,6 +1382,7 @@ function parseCSV(text){
     'cout_points':   'cout',       // Sheet: cout_points → interne: cout
     'etat_defaut':   'etat',       // Sheet: etat_defaut → interne: etat
     'accessible':    '_accessible', // pas utilisé directement, mais préservé
+    'fork':          'parent_id',  // Sheet: fork → interne: parent_id
   };
 
   return rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => {
