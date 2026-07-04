@@ -1141,13 +1141,24 @@ function openPanel(skill){
     .map(d => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${d.label} :</span> ${parseRichText(skill[d.key])}</div>`)
     .join('');
 
+  // Collecter tous les texte_special (texte_special, texte_special_2, texte_special_3...)
+  const specialBlocks = [];
+  if(skill.texte_special && skill.texte_special.trim()) specialBlocks.push(skill.texte_special);
+  for(let i = 2; i <= 10; i++){
+    const key = `texte_special_${i}`;
+    if(skill[key] && skill[key].trim()) specialBlocks.push(skill[key]);
+  }
+  const specialHtml = specialBlocks
+    .map(txt => `<div class="rank-special">${parseRichText(txt)}</div>`)
+    .join('');
+
   const elementalSection = buildElementalEffectsSection(skill);
 
   const body = document.getElementById('panel-body');
   body.innerHTML = `
     <p class="rank-description">${parseRichText(skill.description) || 'Aucune description fournie.'}</p>
     ${statLines ? `<div class="rank-stats">${statLines}</div>` : ''}
-    ${skill.texte_special ? `<div class="rank-special">${parseRichText(skill.texte_special)}</div>` : ''}
+    ${specialHtml}
     ${elementalSection}
     ${forkLabel ? `<div class="stat-row"><span class="label">S'embranche depuis</span><span>${forkLabel}</span></div>` : ''}
     <span class="status-chip ${skill.etat || 'locked'}">${statusLabel(skill.etat)}</span>
