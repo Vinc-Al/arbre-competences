@@ -582,7 +582,7 @@ const DEMO_DATA = [
 const NODE_SIZE      = 52;
 const COL_GAP        = 120;  // horizontal distance between tiers (X axis — left to right)
 const ROW_GAP        = 85;   // vertical distance between branch rows (Y axis — top to bottom)
-const TOP_PADDING    = 60;
+const TOP_PADDING    = 90;   // marge haute (assez pour que le nœud école soit visible)
 const LEFT_PADDING   = 160;  // espace pour le nœud école racine à gauche
 const ROOT_X_OFFSET  = 60;   // position X du nœud école racine
 
