@@ -1141,12 +1141,13 @@ function openPanel(skill){
     .map(d => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${d.label} :</span> ${parseRichText(skill[d.key])}</div>`)
     .join('');
 
-  // Collecter tous les texte_special (texte_special, texte_special_2, texte_special_3...)
+  // Collecter tous les texte_special (supporte les deux conventions :
+  // texte_special, texte_special1/texte_special_1, texte_special2/texte_special_2, etc.)
   const specialBlocks = [];
   if(skill.texte_special && skill.texte_special.trim()) specialBlocks.push(skill.texte_special);
-  for(let i = 2; i <= 10; i++){
-    const key = `texte_special_${i}`;
-    if(skill[key] && skill[key].trim()) specialBlocks.push(skill[key]);
+  for(let i = 1; i <= 10; i++){
+    const val = (skill[`texte_special${i}`] || skill[`texte_special_${i}`] || '').trim();
+    if(val) specialBlocks.push(val);
   }
   const specialHtml = specialBlocks
     .map(txt => `<div class="rank-special">${parseRichText(txt)}</div>`)
