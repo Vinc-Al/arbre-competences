@@ -38,17 +38,49 @@ function parseCSV(text){
     'fork':          'parent_id',  // Sheet: fork → interne: parent_id
   };
 
-  return rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => {
+  const parsed = rows.slice(1).filter(r => r.some(c => c.trim() !== '')).map(r => {
     const obj = {};
     headers.forEach((h, idx) => {
       const key = COLUMN_ALIASES[h] || h;
-      // Ne pas écraser une valeur déjà remplie (ex: si "niveau" ET "tier" existent tous les deux)
       if(!obj[key]) obj[key] = (r[idx] ?? '').trim();
     });
+    return obj;
+  });
+
+  // Propager les noms de branche : les lignes avec branche remplie mais
+  // sans id sont des en-têtes de section (ex: "TRAIT ÉNERGÉTIQUE").
+  // Toutes les lignes suivantes héritent de cette branche jusqu'au
+  // prochain en-tête.
+  let currentBranche = '';
+  const results = [];
+  for(const obj of parsed){
+    const rawBranche = obj.branche || '';
+    const hasId = !!(obj.id || '').trim();
+
+    if(rawBranche && !hasId){
+      // En-tête de section → extraire le nom de branche propre
+      // "LIEN PERSISTANT (fork depuis Trait énergétique I)" → "lien_persistant"
+      let clean = rawBranche
+        .replace(/\s*\(.*\)\s*/, '')      // retirer (fork depuis...)
+        .trim()
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retirer accents
+        .replace(/['']/g, '_')            // apostrophes → underscore
+        .replace(/\s+/g, '_')             // espaces → underscores
+        .replace(/[^a-z0-9_]/g, '');      // retirer caractères spéciaux
+      currentBranche = clean;
+      continue; // ne pas inclure la ligne d'en-tête dans les résultats
+    }
+
+    if(!hasId) continue; // ligne vide
+
+    // Assigner la branche propagée si la colonne branche est vide
+    if(!obj.branche) obj.branche = currentBranche;
+
     obj.niveau = parseInt(obj.niveau, 10) || 0;
     obj.cout   = parseInt(obj.cout, 10) || 0;
-    // Si la colonne "ecole" n'existe pas dans le Sheet, la déduire du préfixe de l'ID
-    // (evo_ → evocation, abj_ → abjuration, inv_ → invocation, etc.)
+
+    // Déduire l'école depuis le préfixe de l'ID si absent
     if(!obj.ecole || obj.ecole === 'default'){
       const ID_TO_ECOLE = {
         'evo_': 'evocation',    'abj_': 'abjuration',
@@ -59,10 +91,11 @@ function parseCSV(text){
       const prefix = Object.keys(ID_TO_ECOLE).find(p => (obj.id||'').startsWith(p));
       obj.ecole = prefix ? ID_TO_ECOLE[prefix] : 'default';
     }
-    // Filtrer les lignes qui sont des sections vides (première colonne = texte en majuscules type "TRAIT ÉNERGÉTIQUE")
-    if(!obj.id && obj.branche && obj.branche === obj.branche.toUpperCase()) return null;
-    return obj;
-  }).filter(obj => obj !== null);
+
+    results.push(obj);
+  }
+
+  return results;
 }
 
 async function fetchCSV(url){
