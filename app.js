@@ -752,12 +752,9 @@ function buildLayout(skills){
   const { byBranche, brancheParent, childrenOf, rootBranches } = buildBrancheGraph(skills);
 
   const positions = {};
-  // COL = horizontal (chaque branche occupe sa propre colonne, gauche→droite)
-  // ROW = vertical (chaque tier progresse de haut→bas via le suffixe de l'ID)
   const brancheCol = {};
   let nextCol = 0;
 
-  // DFS : branches racines de gauche à droite, forks directement à droite de leur parent
   function assignCols(brancheKey){
     brancheCol[brancheKey] = nextCol++;
     (childrenOf[brancheKey] || []).forEach(child => assignCols(child));
@@ -770,11 +767,38 @@ function buildLayout(skills){
     return match ? parseInt(match[1], 10) : 0;
   }
 
-  // Placer les nœuds : X = colonne (branche), Y = tier (haut→bas)
+  // Pour les branches fork : calculer un offset automatique basé sur le parent_id.
+  // Si Canalisation (evo_can_1, tier_id=1) fork depuis evo_nova_2 (tier_id=2),
+  // alors offset = 2 - 1 + 1 = 2, et evo_can_1 se place au tier 1+2 = 3.
+  // Pour les branches racines, offset = 0.
+  const brancheOffset = {};
+  function computeOffset(brancheKey){
+    if(brancheOffset[brancheKey] !== undefined) return brancheOffset[brancheKey];
+    const info = brancheParent[brancheKey];
+    if(!info){ brancheOffset[brancheKey] = 0; return 0; }
+
+    // Tier du nœud parent (dans sa propre branche, avec son propre offset)
+    const parentOffset = computeOffset(info.parentBranche);
+    const parentTier = tierFromId(info.parentSkillId) + parentOffset;
+
+    // Tier minimum des nœuds de CETTE branche fork (le premier nœud)
+    const list = byBranche[brancheKey] || [];
+    const minTier = Math.min(...list.map(s => tierFromId(s.id)));
+
+    // L'offset fait démarrer le premier nœud au tier du parent + 1
+    // (sauf si les IDs encodent déjà le bon tier absolu)
+    const offset = Math.max(0, parentTier + 1 - minTier);
+    brancheOffset[brancheKey] = offset;
+    return offset;
+  }
+  Object.keys(byBranche).forEach(k => computeOffset(k));
+
+  // Placer les nœuds : X = colonne (branche), Y = tier (ID suffix + offset)
   Object.keys(byBranche).forEach(brancheKey => {
     const col = brancheCol[brancheKey];
+    const offset = brancheOffset[brancheKey];
     byBranche[brancheKey].forEach(s => {
-      const tier = tierFromId(s.id);
+      const tier = tierFromId(s.id) + offset;
       positions[s.id] = {
         x: LEFT_PADDING + col * COL_GAP,
         y: TOP_PADDING  + tier * ROW_GAP,
