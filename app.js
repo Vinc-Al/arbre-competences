@@ -752,17 +752,17 @@ function buildLayout(skills){
   const { byBranche, brancheParent, childrenOf, rootBranches } = buildBrancheGraph(skills);
 
   const positions = {};
-  // ROW = vertical (chaque branche occupe sa propre ligne, haut→bas)
-  // COL = horizontal (chaque tier progresse de gauche→droite via le suffixe de l'ID)
-  const brancheRow = {};
-  let nextRow = 0;
+  // COL = horizontal (chaque branche occupe sa propre colonne, gauche→droite)
+  // ROW = vertical (chaque tier progresse de haut→bas via le suffixe de l'ID)
+  const brancheCol = {};
+  let nextCol = 0;
 
-  // DFS : branches racines de haut en bas, forks directement sous leur parent
-  function assignRows(brancheKey){
-    brancheRow[brancheKey] = nextRow++;
-    (childrenOf[brancheKey] || []).forEach(child => assignRows(child));
+  // DFS : branches racines de gauche à droite, forks directement à droite de leur parent
+  function assignCols(brancheKey){
+    brancheCol[brancheKey] = nextCol++;
+    (childrenOf[brancheKey] || []).forEach(child => assignCols(child));
   }
-  rootBranches.forEach(k => assignRows(k));
+  rootBranches.forEach(k => assignCols(k));
 
   // Tier absolu = suffixe numérique de l'ID
   function tierFromId(id){
@@ -770,15 +770,15 @@ function buildLayout(skills){
     return match ? parseInt(match[1], 10) : 0;
   }
 
-  // Placer les nœuds : X = tier (gauche→droite), Y = row (haut→bas)
+  // Placer les nœuds : X = colonne (branche), Y = tier (haut→bas)
   Object.keys(byBranche).forEach(brancheKey => {
-    const row = brancheRow[brancheKey];
+    const col = brancheCol[brancheKey];
     byBranche[brancheKey].forEach(s => {
       const tier = tierFromId(s.id);
       positions[s.id] = {
-        x: LEFT_PADDING + tier * COL_GAP,
-        y: TOP_PADDING  + row * ROW_GAP,
-        brancheKey, row, tier,
+        x: LEFT_PADDING + col * COL_GAP,
+        y: TOP_PADDING  + tier * ROW_GAP,
+        brancheKey, col, tier,
       };
     });
   });
@@ -807,13 +807,13 @@ function renderTree(){
   });
 
   // Root "school" node sits above all root branches, horizontally centred.
-  // Nœud école racine : à GAUCHE, centré verticalement sur toutes les branches racines
-  const rootYs = rootBranches.map(k => {
+  // Nœud école racine : en HAUT, centré horizontalement sur toutes les branches
+  const rootXs = rootBranches.map(k => {
     const first = byBranche[k][0];
-    return first && positions[first.id] ? positions[first.id].y : null;
-  }).filter(y => y !== null);
-  const rootY = rootYs.length ? (Math.min(...rootYs) + Math.max(...rootYs)) / 2 : TOP_PADDING;
-  const rootX = ROOT_X_OFFSET;
+    return first && positions[first.id] ? positions[first.id].x : null;
+  }).filter(x => x !== null);
+  const rootX = rootXs.length ? (Math.min(...rootXs) + Math.max(...rootXs)) / 2 : LEFT_PADDING;
+  const rootY = TOP_PADDING - 60;
 
   const canvasW = maxX + 180;
   const canvasH = maxY + 180;
