@@ -2148,18 +2148,32 @@ function renderTree(){
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     let d;
     if(dashed){
-      // Fork link: parent node → horizontal → down to child first node.
-      // Draw a smooth bezier from the parent (same Y, different X) down to child.
-      const midX = (from.x + to.x) / 2;
-      const midY = (from.y + to.y) / 2;
-      d = `M ${from.x} ${from.y} C ${from.x} ${midY}, ${to.x} ${midY}, ${to.x} ${to.y}`;
+      // Fork : coude en L élégant.
+      // Si le nœud enfant est sur la même rangée Y (même tier) : ligne horizontale droite.
+      // Sinon : sortir horizontalement du parent, puis descendre/monter verticalement vers l'enfant.
+      if(Math.abs(from.y - to.y) < 5){
+        // Même tier → ligne horizontale
+        d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+      } else {
+        // Coude : horizontal depuis le parent jusqu'à la colonne du child, puis vertical
+        const cornerX = to.x;
+        const cornerY = from.y;
+        const r = 12; // rayon de l'arrondi
+        const dirX = to.x > from.x ? 1 : -1;
+        const dirY = to.y > from.y ? 1 : -1;
+        // Ligne horizontale → arrondi → ligne verticale
+        d = `M ${from.x} ${from.y} L ${cornerX - dirX*r} ${cornerY} Q ${cornerX} ${cornerY} ${cornerX} ${cornerY + dirY*r} L ${to.x} ${to.y}`;
+      }
     } else {
-      // Intra-branch: straight vertical line between consecutive tiers.
+      // Intra-branche : ligne droite verticale
       d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
     }
     path.setAttribute('d', d);
-    path.setAttribute('class', 'link-line' + (dashed ? ' fork' : ''));
-    if(dashed) path.setAttribute('stroke-dasharray', '6 6');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', dashed ? '#5a6a8a' : '#3a4a6a');
+    path.setAttribute('stroke-width', dashed ? '1.5' : '2');
+    path.setAttribute('opacity', dashed ? '0.55' : '0.7');
+    if(dashed) path.setAttribute('stroke-dasharray', '5 4');
     svg.appendChild(path);
   }
 
