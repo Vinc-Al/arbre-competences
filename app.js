@@ -751,56 +751,35 @@ function buildBrancheGraph(skills){
 function buildLayout(skills){
   const { byBranche, brancheParent, childrenOf, rootBranches } = buildBrancheGraph(skills);
 
-  const positions = {};       // id -> {x,y}
-  const brancheCol = {};      // brancheKey -> column index (X slot, left to right)
-  let nextCol = 0;
+  const positions = {};
+  // ROW = vertical (chaque branche occupe sa propre ligne, haut→bas)
+  // COL = horizontal (chaque tier progresse de gauche→droite via le suffixe de l'ID)
+  const brancheRow = {};
+  let nextRow = 0;
 
-  // DFS assigning column indices: root branches left-to-right, fork branches
-  // placed to the right of their parent (depth-first), so the tree fans out
-  // horizontally while tiers/niveaux progress vertically (top to bottom).
-  function assignCols(brancheKey){
-    brancheCol[brancheKey] = nextCol++;
-    const kids = childrenOf[brancheKey] || [];
-    kids.forEach(childKey => assignCols(childKey));
+  // DFS : branches racines de haut en bas, forks directement sous leur parent
+  function assignRows(brancheKey){
+    brancheRow[brancheKey] = nextRow++;
+    (childrenOf[brancheKey] || []).forEach(child => assignRows(child));
   }
-  rootBranches.forEach(rootKey => assignCols(rootKey));
+  rootBranches.forEach(k => assignRows(k));
 
-  // y-offset (in tiers) at which a fork branch starts.
-  // A branch forking from niveau N of its parent starts at tier N+1.
-  const brancheStartTier = {};
-
-  function computeStartTier(brancheKey){
-    if(brancheStartTier[brancheKey] !== undefined) return brancheStartTier[brancheKey];
-    const parentInfo = brancheParent[brancheKey];
-    if(!parentInfo){
-      brancheStartTier[brancheKey] = 0;
-      return 0;
-    }
-    const parentBrancheSkills = byBranche[parentInfo.parentBranche] || [];
-    const parentSkill = parentBrancheSkills.find(s => s.id === parentInfo.parentSkillId);
-    const tier = (parentSkill ? parentSkill.niveau : 0) + 1;
-    brancheStartTier[brancheKey] = tier;
-    return tier;
-  }
-  Object.keys(byBranche).forEach(key => computeStartTier(key));
-
-  // Extraire le tier absolu depuis le suffixe numérique de l'ID.
-  // Ex: evo_te_0 → 0, evo_lp_1 → 1, evo_lp_2 → 2, evo_tc_5 → 5
-  // Cela découple le tier affiché de la colonne "niveau/tier" du Sheet.
+  // Tier absolu = suffixe numérique de l'ID
   function tierFromId(id){
     const match = (id || '').match(/(\d+)$/);
     return match ? parseInt(match[1], 10) : 0;
   }
 
-  // place nodes: X = column (branch index), Y = tier extrait de l'ID
+  // Placer les nœuds : X = tier (gauche→droite), Y = row (haut→bas)
   Object.keys(byBranche).forEach(brancheKey => {
-    const col = brancheCol[brancheKey];
-    const list = byBranche[brancheKey];
-    list.forEach(s => {
+    const row = brancheRow[brancheKey];
+    byBranche[brancheKey].forEach(s => {
       const tier = tierFromId(s.id);
-      const x = LEFT_PADDING + col * BRANCH_GAP;
-      const y = TOP_PADDING + tier * TIER_GAP;
-      positions[s.id] = { x, y, brancheKey, col, tier };
+      positions[s.id] = {
+        x: LEFT_PADDING + tier * COL_GAP,
+        y: TOP_PADDING  + row * ROW_GAP,
+        brancheKey, row, tier,
+      };
     });
   });
 
@@ -828,9 +807,13 @@ function renderTree(){
   });
 
   // Root "school" node sits above all root branches, horizontally centred.
-  const rootCols = rootBranches.map(k => positions[byBranche[k][0].id].x).filter(x => x !== undefined);
-  const rootX = rootCols.length ? (Math.min(...rootCols) + Math.max(...rootCols)) / 2 : LEFT_PADDING;
-  const rootY = TOP_PADDING - ROOT_GAP_EXTRA;
+  // Nœud école racine : à GAUCHE, centré verticalement sur toutes les branches racines
+  const rootYs = rootBranches.map(k => {
+    const first = byBranche[k][0];
+    return first && positions[first.id] ? positions[first.id].y : null;
+  }).filter(y => y !== null);
+  const rootY = rootYs.length ? (Math.min(...rootYs) + Math.max(...rootYs)) / 2 : TOP_PADDING;
+  const rootX = ROOT_X_OFFSET;
 
   const canvasW = maxX + 180;
   const canvasH = maxY + 180;
