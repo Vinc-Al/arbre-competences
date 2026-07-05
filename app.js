@@ -225,8 +225,21 @@ function parseElementsCSV(rows){
     // ── Ligne de données (effet) ────────────────────────────────────────
     if(!hasEffetId) return; // ligne vide
 
-    const tier = parseInt(r.tier || r.niveau, 10);
-    if(isNaN(tier) || tier < 0 || tier > 3) return;
+    // Déduire le tier depuis la colonne OU depuis l'ID (ex: feu_t2_afflux → T2)
+    let tier = parseInt(r.tier || r.niveau, 10);
+    if(isNaN(tier)){
+      const tierMatch = r.effet_id.match(/_t(\d+)/);
+      tier = tierMatch ? parseInt(tierMatch[1], 10) : -1;
+    }
+    if(tier < 0 || tier > 3) return;
+
+    // Déduire l'élément depuis l'ID si pas de section en cours
+    // (ex: feu_t0_pur → feu, froid_t1_xxx → froid)
+    let effectElementKey = currentElementKey;
+    if(!effectElementKey && !inCombos){
+      const idPrefix = r.effet_id.match(/^([a-z]+)_t\d+/);
+      if(idPrefix) effectElementKey = idPrefix[1];
+    }
 
     const effect = {
       id: r.effet_id.trim(),
@@ -243,10 +256,10 @@ function parseElementsCSV(rows){
         const ck = [parts[0],parts[1]].sort().join('+');
         if(combos[ck]) combos[ck].tiers[tier].push(effect);
       }
-    } else if(currentElementKey){
+    } else if(effectElementKey){
       // Effet d'un élément simple
-      if(!mastery[currentElementKey]) mastery[currentElementKey] = [[],[],[],[]];
-      mastery[currentElementKey][tier].push(effect);
+      if(!mastery[effectElementKey]) mastery[effectElementKey] = [[],[],[],[]];
+      mastery[effectElementKey][tier].push(effect);
     }
   });
 
@@ -690,29 +703,31 @@ function renderMasteryView(){
 
   html += `</svg></div>`;
 
-  // Fiches détail
+  // Fiches détail — affiche UNIQUEMENT l'effet sélectionné (si un choix a été fait)
   if(!activeEffects.length){
-    html += `<div class="mst-no-effects">Aucun effet disponible pour cette branche à T${_masteryActiveTier}.</div>`;
+    html += `<div class="mst-no-effects">Aucun effet disponible à T${_masteryActiveTier}.</div>`;
   } else {
-    html += `<div class="mst-effects-row">`;
-    activeEffects.forEach(ef=>{
-      const isChosen = activeChosen===ef.id;
-      const ic = effectIcon(ef);
+    const chosenEffect = activeEffects.find(ef => ef.id === activeChosen);
+    if(chosenEffect){
+      const ic = effectIcon(chosenEffect);
       const iconMarkup = iconIsImage(ic)
         ? `<img class="mst-effect-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
         : `<span class="mst-effect-emoji">${ic}</span>`;
-      const blabel = brancheLabel(ef);
-      html += `<div class="mst-effect-card ${isChosen?'chosen':''}" data-eid="${ef.id}" data-ckey="${activeCkey}"
-        style="${isChosen?`border-color:${color};background:color-mix(in srgb,${color} 8%,transparent)`:''}">
-        <div class="mst-effect-name" style="${isChosen?`color:${color}`:''}">
-          ${iconMarkup}${ef.nom}
-          ${isChosen?`<span class="mst-chosen-badge" style="background:${color}">✓</span>`:''}
+      const blabel = brancheLabel(chosenEffect);
+      html += `<div class="mst-effects-row">
+        <div class="mst-effect-card chosen" data-eid="${chosenEffect.id}" data-ckey="${activeCkey}"
+          style="border-color:${color};background:color-mix(in srgb,${color} 8%,transparent);flex:1;max-width:100%">
+          <div class="mst-effect-name" style="color:${color}">
+            ${iconMarkup}${chosenEffect.nom}
+            <span class="mst-chosen-badge" style="background:${color}">✓ Sélectionné</span>
+          </div>
+          ${blabel?`<div class="mst-effect-branche">🔗 ${blabel}</div>`:''}
+          <div class="mst-effect-desc">${parseRichText(chosenEffect.description)}</div>
         </div>
-        ${blabel?`<div class="mst-effect-branche">🔗 ${blabel}</div>`:''}
-        <div class="mst-effect-desc">${parseRichText(ef.description)}</div>
       </div>`;
-    });
-    html += `</div>`;
+    } else {
+      html += `<div class="mst-no-effects">Clique sur un nœud ci-dessus pour sélectionner un effet à ce tier.</div>`;
+    }
   }
 
   if(card.regle){
@@ -1202,13 +1217,18 @@ function formatEffects(effetsRaw){
 function parseRichText(raw){
   if(!raw) return '';
   let safe = raw.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  // [texte](couleur)
+  // [texte](couleur) → mark coloré
   safe = safe.replace(/\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/g, (m, txt, color) => {
     return `<mark class="color-${color}">${txt}</mark>`;
   });
+  // [Nom du sort I+] sans (couleur) → référence de sort stylée
+  // Doit être traité APRÈS [texte](couleur) pour ne pas interférer
+  safe = safe.replace(/\[([^\]]+)\]/g, (m, txt) => {
+    return `<span class="spell-ref">${txt}</span>`;
+  });
   // **gras**
   safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  // sauts de ligne : \n -> <br> (fait après l'échappement pour ne pas être neutralisé)
+  // sauts de ligne
   safe = safe.replace(/\n/g, '<br>');
   return safe;
 }

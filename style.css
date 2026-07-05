@@ -608,6 +608,19 @@
   mark.color-special{ background:none; color:#e08ac0; font-weight:700; }
   mark.color-physique{ background:none; color:#7ab8d4; font-weight:600; }
   mark.color-danger{ background:none; color:#e0593f; font-weight:700; }
+
+  /* Référence de sort [Lien persistant I+] */
+  .spell-ref{
+    color:#d4af6a;
+    font-weight:700;
+    font-style:normal;
+    background:rgba(212,175,106,0.1);
+    border:1px solid rgba(212,175,106,0.25);
+    border-radius:4px;
+    padding:0 5px;
+    font-size:0.92em;
+    white-space:nowrap;
+  }
   #panel .stat-row{
     display:flex; justify-content:space-between; padding:8px 0;
     border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.85rem;
