@@ -42,7 +42,10 @@ function parseCSV(text){
     const obj = {};
     headers.forEach((h, idx) => {
       const key = COLUMN_ALIASES[h] || h;
-      if(!obj[key]) obj[key] = (r[idx] ?? '').trim();
+      const val = (r[idx] ?? '').trim();
+      if(!obj[key]) obj[key] = val;
+      // Préserver la valeur brute de "tier" avant qu'elle soit aliasée en "niveau" et convertie en int
+      if(h === 'tier') obj._raw_tier = val;
     });
     return obj;
   });
@@ -225,20 +228,35 @@ function parseElementsCSV(rows){
     // ── Ligne de données (effet) ────────────────────────────────────────
     if(!hasEffetId) return; // ligne vide
 
-    // Déduire le tier depuis la colonne OU depuis l'ID (ex: feu_t2_afflux → T2)
-    let tier = parseInt(r.tier || r.niveau, 10);
-    if(isNaN(tier)){
-      const tierMatch = r.effet_id.match(/_t(\d+)/);
-      tier = tierMatch ? parseInt(tierMatch[1], 10) : -1;
+    // Déduire le tier TOUJOURS depuis l'ID (feu_t2_afflux → T2)
+    // La colonne "tier" est maintenant utilisée pour le NOM du tier (Étincelle, Brasier...)
+    let tier = -1;
+    const tierMatch = r.effet_id.match(/_t(\d+)/);
+    if(tierMatch) tier = parseInt(tierMatch[1], 10);
+    // Fallback : si l'ID n'a pas de _tX_, essayer la colonne tier comme numérique
+    if(tier < 0){
+      tier = parseInt(r.tier || r.niveau, 10);
     }
-    if(tier < 0 || tier > 3) return;
+    if(isNaN(tier) || tier < 0 || tier > 3) return;
 
+    // Lire le nom du tier depuis la colonne brute "tier" (Étincelle, Brasier, etc.)
+    // _raw_tier contient la valeur originale avant conversion en nombre par parseCSV
+    const rawTier = (r._raw_tier || '').trim();
+    const tierNomFromCol = (rawTier && isNaN(parseInt(rawTier, 10))) ? rawTier : '';
+    
     // Déduire l'élément depuis l'ID si pas de section en cours
-    // (ex: feu_t0_pur → feu, froid_t1_xxx → froid)
     let effectElementKey = currentElementKey;
     if(!effectElementKey && !inCombos){
       const idPrefix = r.effet_id.match(/^([a-z]+)_t\d+/);
       if(idPrefix) effectElementKey = idPrefix[1];
+    }
+
+    // Stocker le nom du tier (premier rencontré par tier par élément)
+    if(tierNomFromCol && effectElementKey && cards[effectElementKey]){
+      if(!cards[effectElementKey].tiers_noms) cards[effectElementKey].tiers_noms = [];
+      if(!cards[effectElementKey].tiers_noms[tier]){
+        cards[effectElementKey].tiers_noms[tier] = tierNomFromCol;
+      }
     }
 
     const effect = {
