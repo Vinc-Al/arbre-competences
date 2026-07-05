@@ -54,25 +54,33 @@ function parseCSV(text){
   let currentBranche = '';
   const results = [];
   for(const obj of parsed){
-    const rawBranche = obj.branche || '';
+    const rawBranche = (obj.branche || '').trim();
+    const rawElement = (obj.element || '').trim();
     const hasId = !!(obj.id || '').trim();
 
-    if(rawBranche && !hasId){
-      // En-tête de section → extraire le nom de branche propre
-      // "LIEN PERSISTANT (fork depuis Trait énergétique I)" → "lien_persistant"
+    // En-tête de section "branche" (pour le CSV compétences) : "TRAIT ÉNERGÉTIQUE"
+    // → propager comme currentBranche, ne PAS inclure dans les résultats
+    if(rawBranche && !hasId && !rawElement){
       let clean = rawBranche
-        .replace(/\s*\(.*\)\s*/, '')      // retirer (fork depuis...)
-        .trim()
-        .toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // retirer accents
-        .replace(/['']/g, '_')            // apostrophes → underscore
-        .replace(/\s+/g, '_')             // espaces → underscores
-        .replace(/[^a-z0-9_]/g, '');      // retirer caractères spéciaux
+        .replace(/\s*\(.*\)\s*/, '')
+        .trim().toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/['']/g, '_').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
       currentBranche = clean;
-      continue; // ne pas inclure la ligne d'en-tête dans les résultats
+      continue;
     }
 
-    if(!hasId) continue; // ligne vide
+    // En-tête de section "element" (pour le CSV éléments) : "FEU — Chaleur"
+    // → INCLURE dans les résultats pour que parseElementsCSV puisse les traiter
+    if(rawElement && !hasId){
+      results.push(obj);
+      continue;
+    }
+
+    if(!hasId) {
+      const hasAnyContent = Object.values(obj).some(v => typeof v === 'string' && v.trim());
+      if(!hasAnyContent) continue;
+    }
 
     // Assigner la branche propagée si la colonne branche est vide
     if(!obj.branche) obj.branche = currentBranche;
@@ -108,50 +116,141 @@ async function fetchCSV(url){
 }
 
 function parseElementsCSV(rows){
-  // Builds ELEMENT_THEMES, ELEMENT_CARDS, ELEMENT_MASTERY from the
-  // "elements" sheet. Each row is one mastery effect.
-  // Colonnes : element_key | element_label | element_color | carte_titre |
-  //            carte_intro | tier | tier_nom | effet_id | effet_nom |
-  //            branches | description | icone
+  // Parse le CSV "Elements" du Sheet DATA.
+  // Format réel :
+  //   Colonne 1 (element) : vide sur les lignes de données, utilisée pour
+  //     les en-têtes de section ("FEU — Chaleur", "FROID — Gel", "COMBOS ÉLÉMENTAIRES")
+  //     et les sous-en-têtes de combo ("combo_feu_acide").
+  //   Colonnes restantes : tier, effet_id, effet_nom, accessible, cout_points,
+  //     branches, description, notes, icone
   //
-  // La colonne "icone" accepte : un emoji (🔥), une URL complète
-  // (https://.../feu.png) ou un chemin relatif dans le repo (icones/feu.png).
+  // Le parseur détecte les en-têtes de section et propage la clé d'élément
+  // aux lignes suivantes, exactement comme parseCSV le fait pour les branches.
+
+  // Map de couleurs par défaut par élément (fallback si le Sheet ne spécifie pas)
+  const DEFAULT_COLORS = {
+    feu:'#e0593f', froid:'#6fa8ff', foudre:'#e0d65f', ombre:'#a99bd1',
+    lumiere:'#f3e6a8', necrotique:'#7ea85a', nature:'#5fd685',
+    acide:'#8fd14f', arcane_force:'#cdb6f5',
+  };
+
   const themes = {};
   const cards = {};
   const mastery = {};
+  const combos = {};
+
+  let currentElementKey = '';
+  let currentCardTitle = '';
+  let inCombos = false;
+  let currentComboKey = '';
 
   rows.forEach(r => {
-    const key = r.element_key;
-    if(!key) return;
-    if(!themes[key]){
-      themes[key] = { label: r.element_label || key, color: r.element_color || '#9aa4b8' };
+    const col0 = (r.element || '').trim();
+    const hasEffetId = !!(r.effet_id || '').trim();
+
+    // ── Détection d'en-tête de section ──────────────────────────────────
+    if(col0 && !hasEffetId){
+      // Sous-en-tête de combo : "combo_feu_acide" (DOIT être testé AVANT le test COMBO général)
+      if(inCombos && col0.startsWith('combo_')){
+        currentComboKey = col0.trim();
+        const parts = currentComboKey.replace('combo_','').split('_');
+        if(parts.length >= 2){
+          const a = parts[0], b = parts[1];
+          const ck = [a,b].sort().join('+');
+          if(!combos[ck]){
+            combos[ck] = {
+              label: (themes[a]?.label||a) + ' + ' + (themes[b]?.label||b),
+              color: DEFAULT_COLORS[a] || '#d4af6a',
+              titre: currentComboKey,
+              intro: '',
+              tiers: [[],[],[],[]],
+            };
+          }
+        }
+        return;
+      }
+
+      // "COMBOS ÉLÉMENTAIRES" ou "COMBOS ÉLÉMENTAIRES - EXEMPLE"
+      if(col0.toUpperCase().includes('COMBO')){
+        inCombos = true;
+        currentComboKey = '';
+        return;
+      }
+
+      // En-tête d'élément : "FEU — Chaleur" ou "FROID — Gel" ou "ARCANE / FORCE"
+      inCombos = false;
+      currentComboKey = '';
+
+      // Extraire clé et titre
+      let key, title;
+      if(col0.includes('—')){
+        const parts = col0.split('—').map(s => s.trim());
+        key = parts[0]; title = parts[1] || '';
+      } else if(col0.includes('-')){
+        const parts = col0.split('-').map(s => s.trim());
+        key = parts[0]; title = parts[1] || '';
+      } else {
+        key = col0; title = '';
+      }
+
+      // Normaliser la clé (FEU → feu, ARCANE / FORCE → arcane_force)
+      currentElementKey = key
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s*\/\s*/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '');
+      currentCardTitle = title || key;
+
+      if(!themes[currentElementKey]){
+        // Label avec la première lettre en majuscule
+        const label = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+        themes[currentElementKey] = {
+          label: label,
+          color: DEFAULT_COLORS[currentElementKey] || '#9aa4b8',
+        };
+      }
+      if(!cards[currentElementKey]){
+        cards[currentElementKey] = {
+          titre: currentCardTitle,
+          intro: '',
+          tiers_noms: [],
+          regle: '',
+        };
+      }
+      if(!mastery[currentElementKey]) mastery[currentElementKey] = [[],[],[],[]];
+      return;
     }
-    if(!cards[key]){
-      cards[key] = {
-        titre: r.carte_titre || key,
-        intro: r.carte_intro || '',
-        tiers_noms: [],
-        regle: r.carte_regle || '',
-      };
-    }
-    if(!mastery[key]) mastery[key] = [[],[],[],[]];
-    const tier = parseInt(r.tier, 10);
+
+    // ── Ligne de données (effet) ────────────────────────────────────────
+    if(!hasEffetId) return; // ligne vide
+
+    const tier = parseInt(r.tier || r.niveau, 10);
     if(isNaN(tier) || tier < 0 || tier > 3) return;
-    // Nom du tier (Étincelle, Brasier...) — pris sur la 1re ligne de chaque tier
-    if(r.tier_nom && !cards[key].tiers_noms[tier]){
-      cards[key].tiers_noms[tier] = r.tier_nom;
+
+    const effect = {
+      id: r.effet_id.trim(),
+      nom: (r.effet_nom || r.effet_id || '').trim(),
+      branches: (r.branches || '*').trim(),
+      description: (r.description || '').trim(),
+      icone: (r.icone || '').trim(),
+    };
+
+    if(inCombos && currentComboKey){
+      // Effet d'une combo
+      const parts = currentComboKey.replace('combo_','').split('_');
+      if(parts.length >= 2){
+        const ck = [parts[0],parts[1]].sort().join('+');
+        if(combos[ck]) combos[ck].tiers[tier].push(effect);
+      }
+    } else if(currentElementKey){
+      // Effet d'un élément simple
+      if(!mastery[currentElementKey]) mastery[currentElementKey] = [[],[],[],[]];
+      mastery[currentElementKey][tier].push(effect);
     }
-    if(!r.effet_id) return; // ligne d'en-tête ou vide
-    mastery[key][tier].push({
-      id: r.effet_id,
-      nom: r.effet_nom || r.effet_id,
-      branches: r.branches || '*',
-      description: r.description || '',
-      icone: r.icone || '',   // emoji, URL ou chemin relatif
-    });
   });
 
-  return { themes, cards, mastery };
+  return { themes, cards, mastery, combos };
 }
 
 function parseCombosCSV(rows){
@@ -177,7 +276,7 @@ function parsePlayerSavesCSV(rows){
   const choices = {};
   rows.forEach(r => {
     if(!r.element_key || r.tier === undefined || r.tier === '') return;
-    const tier = parseInt(r.tier, 10);
+    const tier = parseInt(r.tier || r.niveau, 10);
     if(isNaN(tier)) return;
     choices[`${r.element_key}_t${tier}`] = r.effet_id || null;
   });
@@ -245,14 +344,17 @@ async function loadData(){
     try{
       const rows = await fetchCSV(DATA_SHEETS.elements);
       const parsed = parseElementsCSV(rows);
-      Object.assign(ELEMENT_THEMES, parsed.themes);
-      Object.assign(ELEMENT_CARDS,  parsed.cards);
-      Object.assign(ELEMENT_MASTERY, parsed.mastery);
+      // Remplacer les données codées en dur par celles du Sheet
+      Object.keys(parsed.themes).forEach(k => ELEMENT_THEMES[k] = parsed.themes[k]);
+      Object.keys(parsed.cards).forEach(k => ELEMENT_CARDS[k] = parsed.cards[k]);
+      Object.keys(parsed.mastery).forEach(k => ELEMENT_MASTERY[k] = parsed.mastery[k]);
+      // Les combos sont maintenant dans le même CSV
+      if(parsed.combos) Object.keys(parsed.combos).forEach(k => ELEMENT_COMBOS[k] = parsed.combos[k]);
       elementsLoaded = true;
     } catch(err){ console.warn('Éléments inaccessibles :', err); }
   }
 
-  // ─── 4. COMBOS depuis DATA_SHEETS ──────────────────────────────────────────
+  // ─── 4. COMBOS depuis DATA_SHEETS (optionnel, si onglet séparé) ────────────
   if(DATA_SHEETS.combos){
     try{
       const rows = await fetchCSV(DATA_SHEETS.combos);

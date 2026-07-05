@@ -580,11 +580,11 @@ const DEMO_DATA = [
 /* ========================================================= */
 
 const NODE_SIZE      = 52;
-const COL_GAP        = 160;  // horizontal distance between branches (plus large pour éviter les chevauchements)
-const ROW_GAP        = 105;  // vertical distance between tiers
-const TOP_PADDING    = 100;
-const LEFT_PADDING   = 80;
-const ROOT_X_OFFSET  = 0;
+const COL_GAP        = 120;  // horizontal distance between tiers (X axis — left to right)
+const ROW_GAP        = 85;   // vertical distance between branch rows (Y axis — top to bottom)
+const TOP_PADDING    = 60;
+const LEFT_PADDING   = 160;  // espace pour le nœud école racine à gauche
+const ROOT_X_OFFSET  = 60;   // position X du nœud école racine
 
 let allSkills = [];          // all skills for the current player, all schools
 let schoolsOrder = [];        // list of school keys in encounter order
