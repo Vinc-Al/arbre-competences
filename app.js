@@ -667,9 +667,10 @@ function renderMasteryView(){
     feu_t3_conflagration:'🎲', feu_t3_assecher:'🌵', feu_t3_scorie:'⛓️',
   };
   // Retourne l'icône à utiliser pour un effet : priorité au Sheet (ef.icone),
-  // sinon fallback emoji, sinon "❓".
+  // sinon fallback emoji, sinon "❓". Convertit les URLs Google Drive automatiquement.
   function effectIcon(ef){
-    return ef.icone || EFFECT_EMOJI_FALLBACK[ef.id] || '❓';
+    const raw = ef.icone || EFFECT_EMOJI_FALLBACK[ef.id] || '❓';
+    return fixDriveUrl(raw);
   }
   // Une icône est une image si c'est une URL ou un chemin avec extension image.
   function iconIsImage(ic){
@@ -1090,21 +1091,29 @@ function renderTree(){
    ========================================================= */
 function isImageRef(icone){
   if(!icone) return false;
-  // URL absolue
   if(icone.startsWith('http://') || icone.startsWith('https://')) return true;
-  // Chemin relatif avec extension image connue
   if(/\.(png|jpg|jpeg|gif|webp|svg)$/i.test(icone)) return true;
   return false;
+}
+
+// Convertit les URLs Google Drive en URL d'image directe
+// drive.google.com/file/d/XXXX/view → lh3.googleusercontent.com/d/XXXX
+function fixDriveUrl(url){
+  if(!url) return url;
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if(driveMatch){
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+  }
+  return url;
 }
 
 function renderIcon(icone){
   if(!icone) return '★';
   if(isImageRef(icone)){
-    // Échapper les guillemets pour éviter les injections dans l'attribut src
-    const safe = icone.replace(/"/g, '&quot;');
+    const fixed = fixDriveUrl(icone);
+    const safe = fixed.replace(/"/g, '&quot;');
     return `<img class="node-icon-img" src="${safe}" alt="" draggable="false">`;
   }
-  // Emoji ou texte simple
   return icone;
 }
 
