@@ -424,35 +424,38 @@
 
   .node{
     position:absolute;
-    width:58px;
-    height:58px;
+    width:64px;
+    height:64px;
     border-radius:50%;
     display:flex;
     align-items:center;
     justify-content:center;
     background:radial-gradient(circle at 35% 30%, #1b2230, var(--bg-1));
-    border:2px solid var(--locked);
+    border:2.5px solid var(--locked);
     cursor:pointer;
     z-index:3;
     transition:transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     font-family:'Inter', sans-serif;
+    overflow:hidden; /* l'image remplit le cercle sans déborder */
   }
   .node:hover{ transform:translate(-50%,-50%) scale(1.12) !important; z-index:4; }
   .node .icon{
-    font-size:1.15rem;
+    font-size:1.3rem;
     filter:grayscale(0.6) brightness(0.7);
     transition:filter 0.2s ease;
     pointer-events:none;
     display:flex;
     align-items:center;
     justify-content:center;
+    width:100%;
+    height:100%;
   }
   .node .node-icon-img{
-    width:36px;
-    height:36px;
-    object-fit:contain;
-    border-radius:4px;
-    filter:grayscale(0.5) brightness(0.75);
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:50%;
+    filter:grayscale(0.4) brightness(0.8);
     transition:filter 0.2s ease;
     pointer-events:none;
     display:block;
@@ -463,7 +466,7 @@
     filter:none;
   }
   .node.locked .node-icon-img{
-    filter:grayscale(0.8) brightness(0.5);
+    filter:grayscale(0.85) brightness(0.4);
   }
   .node .node-label{
     position:absolute;
