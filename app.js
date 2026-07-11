@@ -420,8 +420,16 @@ async function loadData(){
   if(mjParam && mjParam === mjPassword){
     isMjMode = true;
   }
-  // Sans joueur = mode MJ par défaut (le MJ regarde sans paramètre joueur)
-  if(!playerName) isMjMode = true;
+  // AVEC joueur → mode joueur (locked masqués, pas de mot de passe)
+  // SANS joueur → mode MJ requis (mot de passe demandé à l'entrée)
+  if(playerName){
+    isMjMode = false; // mode joueur par défaut
+  } else {
+    // Sans joueur : afficher le prompt MJ au chargement
+    if(!isMjMode){
+      promptMjPassword();
+    }
+  }
 
   updateMjUI();
 
@@ -442,6 +450,49 @@ function updateMjUI(){
     btn.textContent = isMjMode ? '🔓 MJ actif' : '🔐 MJ';
     btn.className = 'mj-login-btn' + (isMjMode ? ' active' : '');
   }
+}
+
+// Overlay de mot de passe MJ affiché au chargement (mode sans joueur)
+function promptMjPassword(){
+  // Créer l'overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'mj-overlay';
+  overlay.innerHTML = `
+    <div class="mj-overlay-box">
+      <h2>🔐 Accès Maître du Jeu</h2>
+      <p>Entrez le mot de passe pour accéder à l'arbre complet.</p>
+      <input type="password" id="mj-pw-input" placeholder="Mot de passe MJ" autocomplete="off">
+      <div class="mj-overlay-btns">
+        <button id="mj-pw-submit">Entrer</button>
+      </div>
+      <div id="mj-pw-error" class="mj-pw-error"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById('mj-pw-input');
+  const submit = document.getElementById('mj-pw-submit');
+  const error = document.getElementById('mj-pw-error');
+
+  function tryLogin(){
+    const pw = input.value.trim();
+    if(!pw) return;
+    if(pw === mjPassword){
+      isMjMode = true;
+      updateMjUI();
+      overlay.remove();
+      renderTree();
+      showToast('Mode MJ activé', 'success');
+    } else {
+      error.textContent = 'Mot de passe incorrect';
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  submit.addEventListener('click', tryLogin);
+  input.addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
+  setTimeout(() => input.focus(), 100);
 }
 
 function schoolTheme(key){
