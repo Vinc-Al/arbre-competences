@@ -1300,6 +1300,17 @@ function openPanel(skill){
   document.getElementById('panel-rank').textContent = `RANK – ${skill.niveau}`;
   document.getElementById('panel-title').textContent = skill.nom || skill.id;
 
+  // Icône du sort dans le panneau
+  const iconEl = document.getElementById('panel-icon');
+  if(skill.icone && isImageRef(skill.icone)){
+    const url = fixDriveUrl(skill.icone).replace(/"/g, '&quot;');
+    iconEl.innerHTML = `<img src="${url}" alt="">`;
+  } else if(skill.icone){
+    iconEl.innerHTML = skill.icone; // emoji
+  } else {
+    iconEl.innerHTML = '★';
+  }
+
   const forkLabel = skill.parent_id ? skill.parent_id : null;
 
   // Stat lines with arrow prefix, only shown if the corresponding column is filled
