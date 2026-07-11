@@ -214,7 +214,7 @@ const DATA_SHEETS = {
   competences: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1587029985&single=true&output=csv", // URL CSV de l'onglet "competences" du Sheet DATA
   elements:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv", // URL CSV de l'onglet "elements" du Sheet DATA
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
-  master:      "", // URL CSV de l'onglet "Master" — ligne id=mj_password, valeur=votre_mot_de_passe
+  master:      "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=0&single=true&output=csv", // URL CSV de l'onglet "Master" — ligne id=mj_password, valeur=votre_mot_de_passe
 };
 
 const PLAYER_SHEETS = {
