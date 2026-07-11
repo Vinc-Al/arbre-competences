@@ -412,15 +412,20 @@
   .mst-diagram-wrap{ display:flex; justify-content:center; margin-bottom:18px; }
   .mst-diagram-svg{ width:100%; max-width:620px; height:auto; overflow:visible; }
   .mst-groups-wrap{
-    display:flex; flex-wrap:wrap; gap:24px; justify-content:center;
-    padding:10px 0;
+    display:grid; gap:24px; padding:10px 0;
+    /* Auto-fit intelligent : 1 groupe = pleine largeur, 2 = côte à côte, 3+ = flexible */
+    grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   }
   .mst-group-block{
-    flex:1 1 320px; max-width:440px;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    width:100%;
   }
-  .mst-group-block .mst-diagram-svg{ max-width:400px; }
-  .mst-group-block .mst-effect-card{ width:100%; }
+  .mst-group-block .mst-diagram-svg{
+    width:100%; max-width:460px; height:auto;
+  }
+  .mst-group-block .mst-effect-card{
+    width:100%; box-sizing:border-box;
+  }
   .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
   .mst-node-svg:hover circle{ opacity:0.82; }
   .mst-node-label{ opacity:0; transition:opacity 0.2s ease; pointer-events:none; }
@@ -430,18 +435,20 @@
   /* ── Fiches d'effets ── */
   .mst-effects-row{ display:flex; gap:12px; flex-wrap:wrap; }
   .mst-effect-card{
-    flex:1 1 200px; min-width:180px; background:rgba(255,255,255,0.02);
-    border:1.5px solid var(--line-dim); border-radius:10px; padding:13px 15px;
+    flex:1 1 200px; min-width:180px;
+    background:rgba(255,255,255,0.02);
+    border:1.5px solid var(--line-dim); border-radius:10px;
+    padding:16px 20px;
     cursor:pointer; transition:border-color 0.15s ease, background 0.15s ease;
   }
   .mst-effect-card:hover{ background:rgba(255,255,255,0.04); }
   .mst-effect-name{
-    font-family:'Inter',sans-serif; font-weight:700; font-size:0.85rem;
-    color:var(--text-0); margin-bottom:7px; display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+    font-family:'Inter',sans-serif; font-weight:700; font-size:0.95rem;
+    color:var(--text-0); margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   }
-  .mst-effect-emoji{ font-size:1rem; }
+  .mst-effect-emoji{ font-size:1.15rem; }
   .mst-effect-icon-img{
-    width:20px; height:20px; object-fit:contain;
+    width:24px; height:24px; object-fit:contain;
     border-radius:4px; vertical-align:middle;
   }
   .mst-effect-branche{
@@ -457,7 +464,7 @@
     padding:2px 8px; margin-bottom:4px; display:inline-block;
   }
   .mst-chosen-badge{ font-size:0.62rem; font-weight:700; padding:1px 7px; border-radius:999px; color:#0a0e14; }
-  .mst-effect-desc{ font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--text-0); line-height:1.5; opacity:0.9; }
+  .mst-effect-desc{ font-family:'Inter',sans-serif; font-size:0.88rem; color:var(--text-0); line-height:1.55; opacity:0.92; }
   .mst-regle{
     font-family:'Inter',sans-serif; font-size:0.74rem; color:var(--text-1);
     font-style:italic; text-align:center; margin-top:16px; padding-top:14px; border-top:1px solid var(--line-dim);

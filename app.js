@@ -335,35 +335,131 @@ async function loadData(){
     statusEl.textContent = 'Mode démonstration — Sheet DATA non configuré';
   }
 
-  // ─── 2. SHEET JOUEUR : profil + états (jamais les compétences) ─────────────
-  // Format 3 colonnes : type | id | valeur
-  //   type=profil : classe / niveau / points_total / points_max / tier_max
-  //   type=sort   : id du sort → unlocked/available/locked
+  // ─── 2. SHEET JOUEUR : profil + états ──────────────────────────────────────
+  // Deux formats supportés :
+  //
+  // FORMAT VERTICAL (ancien) :
+  //   type,id,valeur
+  //   profil,classe,Mage
+  //   sort,evo_te_0,unlocked
+  //
+  // FORMAT HORIZONTAL (nouveau) — colonnes par école :
+  //   id,valeur,EVOCATION,STATUT EVOCATION,COÛT EVOCATION,INVOCATION,STATUT INVOCATION,...,ELEMENTS,STATUT ELEMENTS
+  //   classe,Mage,evo_te_0,unlocked,0,,,,...
+  //   niveau,5,evo_te_1,locked,1,,,,...
+  //
+  // Dans le format horizontal :
+  //  - Colonnes A/B : id (nom du champ profil) / valeur (valeur du champ profil)
+  //  - Groupes de 3 colonnes par école : ID | STATUT | COÛT
+  //  - Une colonne "ELEMENTS" + "STATUT ELEMENTS" à la fin pour les effets élémentaires
   const playerCsvUrl = PLAYER_SHEETS[playerName];
   if(playerCsvUrl){
     try{
       const rows = await fetchCSV(playerCsvUrl);
-      const etatMap = {};
-      rows.forEach(r => {
-        const type = (r.type   || '').trim().toLowerCase();
-        const id   = (r.id     || '').trim();
-        const val  = (r.valeur || r.etat || r.value || '').trim();
-        if(!id) return;
-        if(type === 'profil'){
-          if(id === 'classe')            playerProfile.classe       = val;
-          else if(id === 'niveau')       playerProfile.niveau       = parseInt(val,10)||1;
-          else if(id === 'points_total') playerProfile.points_total = parseInt(val,10)||0;
-          else if(id === 'points_max')   playerProfile.points_max   = parseInt(val,10)||999;
-          else if(id === 'tier_max')     playerProfile.tier_max     = parseInt(val,10)||999;
-        } else {
-          // type=sort (ou ancien format 2 colonnes sans type)
-          if(val) etatMap[id] = val;
-        }
-      });
-      if(Object.keys(etatMap).length > 0){
+      const etatMap = {};       // id → état (unlocked/available/locked)
+      const coutMap = {};       // id → coût (numérique, override le coût du DATA)
+      const masteryChoicesFromSheet = {}; // pour les effets élémentaires
+
+      // Détection du format : si on trouve les colonnes STATUT xxx, c'est horizontal
+      const firstRow = rows[0] || {};
+      const isHorizontal = Object.keys(firstRow).some(k => /^statut[_ ]/i.test(k) || /^statut$/i.test(k));
+
+      if(isHorizontal){
+        // ── Format horizontal ────────────────────────────────────────────
+        // Récupérer toutes les colonnes du CSV depuis la première ligne
+        const allCols = Object.keys(firstRow);
+        // Normaliser les noms de colonnes en minuscules pour la recherche
+        function normCol(c){ return c.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+        // Trouver les triplets (idcol, statutcol, coutcol) par école
+        const schoolCols = [];
+        allCols.forEach(col => {
+          const nc = normCol(col);
+          // Chercher les colonnes "STATUT xxx" ou "STATUT xxx "
+          const m = nc.match(/^statut\s+(.+)$/);
+          if(m){
+            const school = m[1].trim();
+            // La colonne id de cette école est celle qui a le nom "xxx" (sans STATUT/COÛT)
+            const idCol = allCols.find(c => normCol(c) === school);
+            const coutCol = allCols.find(c => normCol(c) === 'cout ' + school || normCol(c) === 'cout ' + school + ' ' || normCol(c).replace('cout ','cout_') === 'cout_' + school);
+            if(idCol) schoolCols.push({ school, idCol, statutCol: col, coutCol });
+          }
+        });
+
+        // Parcourir toutes les lignes
+        rows.forEach(r => {
+          // Colonne A/B : profil
+          const profilId  = (r.id || '').trim().toLowerCase();
+          const profilVal = (r.valeur || '').trim();
+          if(profilId && profilVal){
+            if(profilId === 'classe')                                     playerProfile.classe       = profilVal;
+            else if(profilId === 'niveau')                                playerProfile.niveau       = parseInt(profilVal,10)||1;
+            else if(profilId === 'sort_points_total' || profilId === 'points_total')  playerProfile.points_total = parseInt(profilVal,10)||0;
+            else if(profilId === 'sort_points_max'   || profilId === 'points_max')    playerProfile.points_max   = parseInt(profilVal,10)||999;
+            else if(profilId === 'tier_max')                              playerProfile.tier_max     = parseInt(profilVal,10)||999;
+            else if(profilId === 'elements_total')                        playerProfile.elements_total = parseInt(profilVal,10)||0;
+            else if(profilId === 'elements_max')                          playerProfile.elements_max   = parseInt(profilVal,10)||10;
+          }
+
+          // Colonnes école : parcourir chaque triplet
+          schoolCols.forEach(({ school, idCol, statutCol, coutCol }) => {
+            const sortId = (r[idCol] || '').trim();
+            const statut = (r[statutCol] || '').trim().toLowerCase();
+            if(!sortId) return;
+            // Effets élémentaires : colonne "ELEMENTS"
+            if(/^element/i.test(school)){
+              if(statut === 'unlocked') masteryChoicesFromSheet[sortId] = sortId;
+              // Rien à faire pour locked (état par défaut)
+              return;
+            }
+            // Sorts d'école
+            if(statut) etatMap[sortId] = statut;
+            if(coutCol){
+              const c = parseInt((r[coutCol] || '').trim(), 10);
+              if(!isNaN(c)) coutMap[sortId] = c;
+            }
+          });
+        });
+
+        // Appliquer aux mastery choices élémentaires
+        // Format attendu : masteryChoices[element_tX] = effect_id
+        Object.keys(masteryChoicesFromSheet).forEach(sortId => {
+          // Extraire element et tier depuis l'ID (feu_t0_pur → key = feu_t0)
+          const m = sortId.match(/^([a-z]+)_t(\d+)/);
+          if(m){
+            const key = `${m[1]}_t${m[2]}`;
+            masteryChoices[key] = sortId;
+          }
+        });
+
+      } else {
+        // ── Format vertical (ancien) ─────────────────────────────────────
+        rows.forEach(r => {
+          const type = (r.type   || '').trim().toLowerCase();
+          const id   = (r.id     || '').trim();
+          const val  = (r.valeur || r.etat || r.value || '').trim();
+          if(!id) return;
+          if(type === 'profil'){
+            if(id === 'classe')            playerProfile.classe       = val;
+            else if(id === 'niveau')       playerProfile.niveau       = parseInt(val,10)||1;
+            else if(id === 'points_total') playerProfile.points_total = parseInt(val,10)||0;
+            else if(id === 'points_max')   playerProfile.points_max   = parseInt(val,10)||999;
+            else if(id === 'tier_max')     playerProfile.tier_max     = parseInt(val,10)||999;
+          } else {
+            if(val) etatMap[id] = val;
+          }
+        });
+      }
+
+      // Appliquer les états et coûts aux sorts
+      if(Object.keys(etatMap).length > 0 || Object.keys(coutMap).length > 0){
         allSkills = allSkills.map(s => {
           const e = etatMap[s.id];
-          return e ? { ...s, etat: e } : s;
+          const c = coutMap[s.id];
+          const updated = { ...s };
+          if(e) updated.etat = e;
+          if(c !== undefined) updated.cout = c;
+          return updated;
         });
       }
       const badge = document.getElementById('player-class-badge');
