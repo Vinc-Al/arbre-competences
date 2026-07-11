@@ -265,6 +265,7 @@ function parseElementsCSV(rows){
       branches: (r.branches || '*').trim(),
       description: (r.description || '').trim(),
       icone: (r.icone || '').trim(),
+      groupe: (r.groupe || '').trim(),  // groupe pour les cercles multiples par tier
     };
 
     if(inCombos && currentComboKey){
@@ -616,8 +617,14 @@ function renderMasteryView(){
   html += `<div class="mst-tier-nav">`;
   tiers.forEach((_,ti)=>{
     const active = ti === _masteryActiveTier;
-    const ckey = `${groupKey}_t${ti}`;
-    const hasChoice = !!masteryChoices[ckey] && tiers[ti].some(ef=>ef.id===masteryChoices[ckey]);
+    // Vérifier si au moins un choix a été fait dans n'importe quel groupe de ce tier
+    const tierEffects = tiers[ti];
+    const tierGroups = {};
+    tierEffects.forEach(ef => { const gk = ef.groupe || '_default'; if(!tierGroups[gk]) tierGroups[gk]=[]; tierGroups[gk].push(ef); });
+    const hasChoice = Object.keys(tierGroups).some(gk => {
+      const gi2 = parseGroupe(gk, ti);
+      return !!masteryChoices[gi2.ckey] && tierGroups[gk].some(ef=>ef.id===masteryChoices[gi2.ckey]);
+    });
     html += `<div class="mst-tier-nav-item ${active?'active':''}" data-tier="${ti}"
       style="${active?`border-color:${color};box-shadow:0 0 12px ${color}55`:hasChoice?`border-color:${color}88`:''}">
       <span class="mst-tier-nav-label" style="${active?`color:${color}`:hasChoice?`color:${color}99`:''}">T${ti}</span>
@@ -636,22 +643,31 @@ function renderMasteryView(){
     <span class="mst-tier-intro">${parseRichText(card.intro)}</span>
   </div>`;
 
-  // Tous les effets du tier sont affichés (plus de filtrage par branche).
+  // Tous les effets du tier actif
   const activeEffects = tiers[_masteryActiveTier];
-  const activeCkey = `${groupKey}_t${_masteryActiveTier}`;
-  const activeChosen = masteryChoices[activeCkey];
 
-  // Étiquette de branche pour un effet restreint (vide si "*")
+  // Étiquette de branche pour un effet restreint
   function brancheLabel(ef){
     if(!ef.branches || ef.branches === '*') return '';
     return ef.branches.split(',').map(b => b.trim().replace(/_/g,' ')).join(', ');
   }
 
-  // Diagramme éclaté style D4
-  const SVG_W=620, SVG_H=340, CX=SVG_W/2, CY=SVG_H/2;
-  const RADIUS=120, NODE_R=26, CENTER_R=42;
-  const n = activeEffects.length;
-
+  // Helpers icônes
+  const EFFECT_EMOJI_FALLBACK = {
+    feu_t0_primal:'🔥', feu_t0_eclats:'🎇', feu_t0_magmatique:'🪨', feu_t0_lame:'⚔️', feu_t0_pyroplastique:'💥',
+    feu_t1_incineration:'☄️', feu_t1_brulure:'🔥',
+    feu_t2_afflux:'✨', feu_t2_attiser:'🌋',
+    feu_t3_conflagration:'🎲', feu_t3_assecher:'🌵', feu_t3_scorie:'⛓️',
+  };
+  function effectIcon(ef){
+    const raw = ef.icone || EFFECT_EMOJI_FALLBACK[ef.id] || '❓';
+    return fixDriveUrl(raw);
+  }
+  function iconIsImage(ic){
+    if(!ic) return false;
+    if(ic.startsWith('http://') || ic.startsWith('https://')) return true;
+    return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(ic);
+  }
   function getAngle(i,total){
     if(total===1) return -Math.PI/2;
     const span = total<=4 ? Math.PI*1.1 : 2*Math.PI*(total-1)/total;
@@ -659,94 +675,124 @@ function renderMasteryView(){
     return start + (span/(total-1||1))*i;
   }
 
-  // Fallback emoji si le Sheet ne fournit pas d'icône (colonne "icone" vide)
-  const EFFECT_EMOJI_FALLBACK = {
-    feu_t0_primal:'🔥', feu_t0_eclats:'🎇', feu_t0_magmatique:'🪨', feu_t0_lame:'⚔️', feu_t0_pyroplastique:'💥',
-    feu_t1_incineration:'☄️', feu_t1_brulure:'🔥',
-    feu_t2_afflux:'✨', feu_t2_attiser:'🌋',
-    feu_t3_conflagration:'🎲', feu_t3_assecher:'🌵', feu_t3_scorie:'⛓️',
-  };
-  // Retourne l'icône à utiliser pour un effet : priorité au Sheet (ef.icone),
-  // sinon fallback emoji, sinon "❓". Convertit les URLs Google Drive automatiquement.
-  function effectIcon(ef){
-    const raw = ef.icone || EFFECT_EMOJI_FALLBACK[ef.id] || '❓';
-    return fixDriveUrl(raw);
+  // ── Grouper les effets par "groupe" ────────────────────────────────────
+  // Format du groupe : "ecole_sousgroupe" (ex: evocation_acide, abjuration_fel)
+  // ou juste "sousgroupe" (ex: acide) si pas de restriction d'école.
+  // Si vide → tous dans un seul cercle par défaut.
+  
+  function parseGroupe(gk, tierIdx){
+    const t = tierIdx !== undefined ? tierIdx : _masteryActiveTier;
+    if(!gk || gk === '_default') return { school: '', label: '', ckey: `${groupKey}_t${t}` };
+    const ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
+    const parts = gk.split('_');
+    if(parts.length >= 2 && ECOLES.includes(parts[0])){
+      const school = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      const label = parts.slice(1).join(' ').charAt(0).toUpperCase() + parts.slice(1).join(' ').slice(1);
+      return { school, label, ckey: `${groupKey}_t${t}_${gk}` };
+    }
+    const label = gk.charAt(0).toUpperCase() + gk.slice(1);
+    return { school: '', label, ckey: `${groupKey}_t${t}_${gk}` };
   }
-  // Une icône est une image si c'est une URL ou un chemin avec extension image.
-  function iconIsImage(ic){
-    if(!ic) return false;
-    if(ic.startsWith('http://') || ic.startsWith('https://')) return true;
-    return /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(ic);
-  }
 
-  const nodes = activeEffects.map((ef,i)=>{
-    const a=getAngle(i,n);
-    return { ef, nx:CX+RADIUS*Math.cos(a), ny:CY+RADIUS*Math.sin(a), a, isChosen:activeChosen===ef.id };
+  const groupMap = {};
+  activeEffects.forEach(ef => {
+    const gk = ef.groupe || '_default';
+    if(!groupMap[gk]) groupMap[gk] = [];
+    groupMap[gk].push(ef);
   });
+  const groupKeys = Object.keys(groupMap);
 
-  html += `<div class="mst-diagram-wrap"><svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
-    <defs><filter id="glow-${groupKey}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
-
-  // Lignes centre→effets
-  nodes.forEach(({nx,ny,isChosen})=>{
-    html += `<line x1="${CX}" y1="${CY}" x2="${nx}" y2="${ny}"
-      stroke="${isChosen?color:'#2a3344'}" stroke-width="${isChosen?2.5:1.5}"
-      opacity="${isChosen?0.9:0.4}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
-  });
-
-  // Nœud central
-  html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#glow-${groupKey})"/>
-    <text x="${CX}" y="${CY-6}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="15" font-weight="bold">T${_masteryActiveTier}</text>
-    <text x="${CX}" y="${CY+11}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${tierNoms[_masteryActiveTier]}</text>`;
-
-  // Nœuds d'effets : cercle avec icône (image ou emoji) au centre, NOM en dehors
-  nodes.forEach(({ef,nx,ny,a,isChosen})=>{
-    const ic = effectIcon(ef);
-    const fc = isChosen ? color+'2e' : '#1b2230';
-    const sc = isChosen ? color : '#3a4253';
-    const labelDist = NODE_R + 16;
-    const lx = nx + Math.cos(a)*labelDist;
-    const ly = ny + Math.sin(a)*labelDist;
-    const anchor = Math.abs(Math.cos(a)) < 0.35 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end');
-    const tc = isChosen ? color : '#c4ccd8';
-    // Contenu central : image SVG ou texte emoji
-    const iconMarkup = iconIsImage(ic)
-      ? `<image href="${ic.replace(/"/g,'&quot;')}" x="${nx-16}" y="${ny-16}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`
-      : `<text x="${nx}" y="${ny+6}" text-anchor="middle" font-size="18">${ic}</text>`;
-    html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${activeCkey}">
-      <circle cx="${nx}" cy="${ny}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#glow-${groupKey})"`:''}/>
-      ${iconMarkup}
-      <text x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
-    </g>`;
-  });
-
-  html += `</svg></div>`;
-
-  // Fiches détail — affiche UNIQUEMENT l'effet sélectionné (si un choix a été fait)
+  // ── Un diagramme SVG par groupe ────────────────────────────────────────
   if(!activeEffects.length){
     html += `<div class="mst-no-effects">Aucun effet disponible à T${_masteryActiveTier}.</div>`;
   } else {
-    const chosenEffect = activeEffects.find(ef => ef.id === activeChosen);
-    if(chosenEffect){
-      const ic = effectIcon(chosenEffect);
-      const iconMarkup = iconIsImage(ic)
-        ? `<img class="mst-effect-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
-        : `<span class="mst-effect-emoji">${ic}</span>`;
-      const blabel = brancheLabel(chosenEffect);
-      html += `<div class="mst-effects-row">
-        <div class="mst-effect-card chosen" data-eid="${chosenEffect.id}" data-ckey="${activeCkey}"
-          style="border-color:${color};background:color-mix(in srgb,${color} 8%,transparent);flex:1;max-width:100%">
+    html += `<div class="mst-groups-wrap">`;
+    groupKeys.forEach(gk => {
+      const effects = groupMap[gk];
+      const gi = parseGroupe(gk);
+      const ckey = gi.ckey;
+      const chosen = masteryChoices[ckey];
+      const n = effects.length;
+
+      // SVG dimensions adaptées au nombre de nœuds
+      const SVG_W = 360, SVG_H = 340;
+      const CX = SVG_W/2, CY = SVG_H/2;
+      const RADIUS = Math.min(110, 60 + n * 12);
+      const NODE_R = 26, CENTER_R = 38;
+
+      const nodes = effects.map((ef,i) => {
+        const a = getAngle(i, n);
+        return { ef, nx:CX+RADIUS*Math.cos(a), ny:CY+RADIUS*Math.sin(a), a, isChosen:chosen===ef.id };
+      });
+
+      html += `<div class="mst-group-block">`;
+      html += `<svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
+        <defs><filter id="glow-${ckey.replace(/[^a-z0-9]/gi,'')}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+
+      const filtId = `glow-${ckey.replace(/[^a-z0-9]/gi,'')}`;
+
+      // Lignes centre→nœuds
+      nodes.forEach(({nx,ny,isChosen}) => {
+        html += `<line x1="${CX}" y1="${CY}" x2="${nx}" y2="${ny}"
+          stroke="${isChosen?color:'#2a3344'}" stroke-width="${isChosen?2.5:1.5}"
+          opacity="${isChosen?0.9:0.4}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
+      });
+
+      // Nœud central
+      const centerLabel = gi.label || `T${_masteryActiveTier}`;
+      const centerSub = gi.label ? `T${_masteryActiveTier}` : (tierNoms[_masteryActiveTier] || '');
+      html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#${filtId})"/>
+        <text x="${CX}" y="${CY - (gi.school ? 12 : 6)}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${centerLabel}</text>
+        <text x="${CX}" y="${CY + (gi.school ? 2 : 10)}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${centerSub}</text>`;
+      // Tag école dans le nœud central
+      if(gi.school){
+        html += `<text x="${CX}" y="${CY + 16}" text-anchor="middle" fill="#a98ce0" font-family="Inter,sans-serif" font-size="7.5" font-weight="600">${gi.school}</text>`;
+      }
+
+      // Nœuds d'effets
+      nodes.forEach(({ef,nx,ny,a,isChosen}) => {
+        const ic = effectIcon(ef);
+        const fc = isChosen ? color+'2e' : '#1b2230';
+        const sc = isChosen ? color : '#3a4253';
+        const labelDist = NODE_R + 16;
+        const lx = nx + Math.cos(a)*labelDist;
+        const ly = ny + Math.sin(a)*labelDist;
+        const anchor = Math.abs(Math.cos(a)) < 0.35 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end');
+        const tc = isChosen ? color : '#c4ccd8';
+        const iconMarkup = iconIsImage(ic)
+          ? `<image href="${ic.replace(/"/g,'&quot;')}" x="${nx-16}" y="${ny-16}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`
+          : `<text x="${nx}" y="${ny+6}" text-anchor="middle" font-size="18">${ic}</text>`;
+        html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}">
+          <circle cx="${nx}" cy="${ny}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
+          ${iconMarkup}
+          <text x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
+        </g>`;
+      });
+
+      html += `</svg>`;
+
+      // Fiche de l'effet sélectionné pour ce groupe
+      const chosenEf = effects.find(ef => ef.id === chosen);
+      if(chosenEf){
+        const ic = effectIcon(chosenEf);
+        const iconMarkup = iconIsImage(ic)
+          ? `<img class="mst-effect-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
+          : `<span class="mst-effect-emoji">${ic}</span>`;
+        const blabel = brancheLabel(chosenEf);
+        html += `<div class="mst-effect-card chosen" data-eid="${chosenEf.id}" data-ckey="${ckey}"
+          style="border-color:${color};background:color-mix(in srgb,${color} 8%,transparent)">
           <div class="mst-effect-name" style="color:${color}">
-            ${iconMarkup}${chosenEffect.nom}
-            <span class="mst-chosen-badge" style="background:${color}">✓ Sélectionné</span>
+            ${iconMarkup}${chosenEf.nom}
+            <span class="mst-chosen-badge" style="background:${color}">✓</span>
           </div>
+          ${gi.school?`<div class="mst-effect-school">🏫 ${gi.school}</div>`:''}
           ${blabel?`<div class="mst-effect-branche">🔗 ${blabel}</div>`:''}
-          <div class="mst-effect-desc">${parseRichText(chosenEffect.description)}</div>
-        </div>
-      </div>`;
-    } else {
-      html += `<div class="mst-no-effects">Clique sur un nœud ci-dessus pour sélectionner un effet à ce tier.</div>`;
-    }
+          <div class="mst-effect-desc">${parseRichText(chosenEf.description)}</div>
+        </div>`;
+      }
+      html += `</div>`; // end group block
+    });
+    html += `</div>`; // end groups wrap
   }
 
   if(card.regle){

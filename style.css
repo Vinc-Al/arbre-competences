@@ -347,6 +347,15 @@
   /* ── Diagramme éclaté SVG ── */
   .mst-diagram-wrap{ display:flex; justify-content:center; margin-bottom:18px; }
   .mst-diagram-svg{ width:100%; max-width:620px; height:auto; overflow:visible; }
+  .mst-groups-wrap{
+    display:flex; flex-wrap:wrap; gap:16px; justify-content:center;
+  }
+  .mst-group-block{
+    flex:1 1 300px; max-width:420px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+  }
+  .mst-group-block .mst-diagram-svg{ max-width:360px; }
+  .mst-group-block .mst-effect-card{ width:100%; }
   .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
   .mst-node-svg:hover circle{ opacity:0.82; }
   .mst-no-effects{ font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--text-1); text-align:center; padding:20px; }
@@ -373,6 +382,12 @@
     color:var(--arcane-glow); background:rgba(111,168,255,0.08);
     border:1px solid rgba(111,168,255,0.25); border-radius:5px;
     padding:2px 8px; margin-bottom:8px; display:inline-block;
+  }
+  .mst-effect-school{
+    font-family:'Inter',sans-serif; font-size:0.68rem;
+    color:#a98ce0; background:rgba(169,140,224,0.08);
+    border:1px solid rgba(169,140,224,0.25); border-radius:5px;
+    padding:2px 8px; margin-bottom:4px; display:inline-block;
   }
   .mst-chosen-badge{ font-size:0.62rem; font-weight:700; padding:1px 7px; border-radius:999px; color:#0a0e14; }
   .mst-effect-desc{ font-family:'Inter',sans-serif; font-size:0.78rem; color:var(--text-0); line-height:1.5; opacity:0.9; }
