@@ -101,6 +101,30 @@
     background:rgba(255,255,255,0.06); border:1px solid var(--line-dim);
     border-radius:4px; padding:1px 7px; margin-left:8px; vertical-align:middle;
   }
+  .mode-badge{
+    display:inline-block; font-size:0.62rem; font-weight:600;
+    padding:2px 8px; border-radius:4px; margin-left:8px; vertical-align:middle;
+    background:rgba(111,168,255,0.12); border:1px solid rgba(111,168,255,0.3);
+    color:var(--arcane-glow);
+  }
+  .mode-badge.mj{
+    background:rgba(169,140,224,0.15); border-color:rgba(169,140,224,0.4);
+    color:#a98ce0;
+  }
+  .mj-login-btn{
+    font-family:'Inter',sans-serif; font-size:0.75rem;
+    background:rgba(169,140,224,0.1); border:1px solid rgba(169,140,224,0.3);
+    color:#a98ce0; border-radius:6px; padding:5px 12px; cursor:pointer;
+    transition:background 0.15s ease, border-color 0.15s ease;
+    white-space:nowrap;
+  }
+  .mj-login-btn:hover{
+    background:rgba(169,140,224,0.2); border-color:rgba(169,140,224,0.5);
+  }
+  .mj-login-btn.active{
+    background:rgba(169,140,224,0.25); color:#c4b0e8;
+    border-color:#a98ce0;
+  }
   .points-block{ display:flex; flex-direction:column; gap:5px; align-items:flex-end; }
   .points-bar-wrap{ width:170px; height:4px; background:rgba(111,168,255,0.12); border-radius:999px; overflow:hidden; }
   .points-bar-fill{ height:100%; border-radius:999px; background:var(--arcane-glow); transition:width 0.4s ease, background 0.3s ease; width:0%; }
@@ -348,16 +372,19 @@
   .mst-diagram-wrap{ display:flex; justify-content:center; margin-bottom:18px; }
   .mst-diagram-svg{ width:100%; max-width:620px; height:auto; overflow:visible; }
   .mst-groups-wrap{
-    display:flex; flex-wrap:wrap; gap:16px; justify-content:center;
+    display:flex; flex-wrap:wrap; gap:24px; justify-content:center;
+    padding:10px 0;
   }
   .mst-group-block{
-    flex:1 1 300px; max-width:420px;
+    flex:1 1 320px; max-width:440px;
     display:flex; flex-direction:column; align-items:center; gap:10px;
   }
-  .mst-group-block .mst-diagram-svg{ max-width:360px; }
+  .mst-group-block .mst-diagram-svg{ max-width:400px; }
   .mst-group-block .mst-effect-card{ width:100%; }
   .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
   .mst-node-svg:hover circle{ opacity:0.82; }
+  .mst-node-label{ opacity:0; transition:opacity 0.2s ease; pointer-events:none; }
+  .mst-node-svg:hover .mst-node-label{ opacity:1; }
   .mst-no-effects{ font-family:'Inter',sans-serif; font-size:0.82rem; color:var(--text-1); text-align:center; padding:20px; }
 
   /* ── Fiches d'effets ── */

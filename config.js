@@ -214,6 +214,7 @@ const DATA_SHEETS = {
   competences: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1587029985&single=true&output=csv", // URL CSV de l'onglet "competences" du Sheet DATA
   elements:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv", // URL CSV de l'onglet "elements" du Sheet DATA
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
+  master:      "", // URL CSV de l'onglet "Master" — ligne id=mj_password, valeur=votre_mot_de_passe
 };
 
 const PLAYER_SHEETS = {
@@ -580,11 +581,11 @@ const DEMO_DATA = [
 /* ========================================================= */
 
 const NODE_SIZE      = 52;
-const COL_GAP        = 120;  // horizontal distance between tiers (X axis — left to right)
-const ROW_GAP        = 85;   // vertical distance between branch rows (Y axis — top to bottom)
-const TOP_PADDING    = 60;
-const LEFT_PADDING   = 160;  // espace pour le nœud école racine à gauche
-const ROOT_X_OFFSET  = 60;   // position X du nœud école racine
+const COL_GAP        = 160;  // horizontal distance between branches (plus large pour éviter les chevauchements)
+const ROW_GAP        = 105;  // vertical distance between tiers
+const TOP_PADDING    = 100;
+const LEFT_PADDING   = 80;
+const ROOT_X_OFFSET  = 0;
 
 let allSkills = [];          // all skills for the current player, all schools
 let schoolsOrder = [];        // list of school keys in encounter order
@@ -600,12 +601,21 @@ let playerProfile = {
   tier_max:     999,
 };
 
-let selectedElements = new Set();   // element keys currently checked in the global menu
-let masteryChoices = {};            // `${element}_t${tier}` -> chosen effect id (per element per tier)
-let masteryViewOpen = false;        // whether the "Maîtrise élémentaire" view is showing
-let masteryBranchFilter = null;     // branche key used to filter which effects show in mastery view
+// Mode MJ : affiche TOUS les sorts (y compris locked).
+// Mode Joueur (par défaut avec ?joueur=X) : masque les sorts locked.
+let isMjMode = false;
+let mjPassword = '';  // chargé depuis le Sheet Master
+
+let selectedElements = new Set();
+let masteryChoices = {};
+let masteryViewOpen = false;
+let masteryBranchFilter = null;
 
 function getPlayerFromURL(){
   const params = new URLSearchParams(window.location.search);
   return params.get('joueur') || params.get('player') || '';
+}
+function getMjFromURL(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get('mj') || '';
 }

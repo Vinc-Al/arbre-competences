@@ -403,9 +403,45 @@ async function loadData(){
     } catch(err){ console.warn('Sauvegardes inaccessibles :', err); }
   }
 
+  // ─── 6. MOT DE PASSE MJ depuis DATA_SHEETS.master ─────────────────────────
+  if(DATA_SHEETS.master){
+    try{
+      const rows = await fetchCSV(DATA_SHEETS.master);
+      rows.forEach(r => {
+        const id = (r.id || r.parametre || '').trim().toLowerCase();
+        const val = (r.valeur || r.value || '').trim();
+        if(id === 'mj_password' || id === 'password') mjPassword = val;
+      });
+    } catch(err){ console.warn('Master inaccessible :', err); }
+  }
+
+  // Activer le mode MJ si le paramètre URL correspond au mot de passe
+  const mjParam = getMjFromURL();
+  if(mjParam && mjParam === mjPassword){
+    isMjMode = true;
+  }
+  // Sans joueur = mode MJ par défaut (le MJ regarde sans paramètre joueur)
+  if(!playerName) isMjMode = true;
+
+  updateMjUI();
+
   statusEl.textContent = skillsLoaded
     ? `Données chargées${playerName ? ' pour ' + playerName : ''} ✓`
     : statusEl.textContent;
+}
+
+// Met à jour l'UI du mode MJ/Joueur
+function updateMjUI(){
+  const badge = document.getElementById('mode-badge');
+  const btn = document.getElementById('mj-login-btn');
+  if(badge){
+    badge.textContent = isMjMode ? 'Mode MJ' : 'Joueur';
+    badge.className = 'mode-badge' + (isMjMode ? ' mj' : '');
+  }
+  if(btn){
+    btn.textContent = isMjMode ? '🔓 MJ actif' : '🔐 MJ';
+    btn.className = 'mj-login-btn' + (isMjMode ? ' active' : '');
+  }
 }
 
 function schoolTheme(key){
@@ -714,11 +750,11 @@ function renderMasteryView(){
       const chosen = masteryChoices[ckey];
       const n = effects.length;
 
-      // SVG dimensions adaptées au nombre de nœuds
-      const SVG_W = 360, SVG_H = 340;
+      // SVG dimensions avec marges pour les labels au hover
+      const SVG_W = 400, SVG_H = 380;
       const CX = SVG_W/2, CY = SVG_H/2;
-      const RADIUS = Math.min(110, 60 + n * 12);
-      const NODE_R = 26, CENTER_R = 38;
+      const RADIUS = Math.min(130, 75 + n * 14);
+      const NODE_R = 28, CENTER_R = 40;
 
       const nodes = effects.map((ef,i) => {
         const a = getAngle(i, n);
@@ -765,7 +801,7 @@ function renderMasteryView(){
         html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}">
           <circle cx="${nx}" cy="${ny}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
           ${iconMarkup}
-          <text x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
+          <text class="mst-node-label" x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
         </g>`;
       });
 
@@ -862,7 +898,12 @@ function savePlayerChoices(){
 }
 
 function currentSkills(){
-  return allSkills.filter(s => s.ecole === currentSchool);
+  let skills = allSkills.filter(s => s.ecole === currentSchool);
+  // Mode joueur : masquer les sorts verrouillés (seuls unlocked et available sont visibles)
+  if(!isMjMode){
+    skills = skills.filter(s => s.etat === 'unlocked' || s.etat === 'available');
+  }
+  return skills;
 }
 
 /* =========================================================
@@ -1418,6 +1459,28 @@ function closePanel(){
 }
 
 document.getElementById('panel-close').addEventListener('click', closePanel);
+
+// Bouton MJ : prompt pour le mot de passe
+document.getElementById('mj-login-btn').addEventListener('click', () => {
+  if(isMjMode){
+    // Déjà en mode MJ → désactiver
+    isMjMode = false;
+    updateMjUI();
+    renderTree();
+    showToast('Mode joueur activé — sorts verrouillés masqués', 'warn');
+    return;
+  }
+  const input = prompt('Mot de passe MJ :');
+  if(!input) return;
+  if(input === mjPassword){
+    isMjMode = true;
+    updateMjUI();
+    renderTree();
+    showToast('Mode MJ activé — tous les sorts visibles', 'success');
+  } else {
+    showToast('Mot de passe incorrect', 'error');
+  }
+});
 document.getElementById('overlay').addEventListener('click', closePanel);
 
 /* Zoom controls */
