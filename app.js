@@ -1016,6 +1016,11 @@ function renderMasteryView(){
           <stop offset="55%" stop-color="${color}" stop-opacity="0.4"/>
           <stop offset="100%" stop-color="#0a0e14" stop-opacity="0.95"/>
         </radialGradient>
+        <radialGradient id="node-fill-${filtId}" cx="50%" cy="45%" r="60%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.55"/>
+          <stop offset="55%" stop-color="${color}" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="#0f1520" stop-opacity="0.95"/>
+        </radialGradient>
         <linearGradient id="line-fade-${filtId}" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0.15"/>
@@ -1153,11 +1158,13 @@ function renderMasteryView(){
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC * 1.5}" fill="url(#node-halo-${filtId})"/>`;
 
         // Anneau extérieur + nœud doctrine
+        // Fill dégradé (gradient radial coloré) si pas d'icône, sinon fond sombre
+        const docIcon = getMasterIcon(commonSchool, docData.label);
+        const docFill = docIcon ? '#0f1520' : `url(#node-fill-${filtId})`;
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC + 5}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.3"/>`;
-        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="#0f1520" stroke="${color}" stroke-width="1.8" filter="url(#${filtId})"/>`;
+        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="${docFill}" stroke="${color}" stroke-width="1.8" filter="url(#${filtId})"/>`;
 
         // Icône Master pour la doctrine (format: icon_evocation_combustion)
-        const docIcon = getMasterIcon(commonSchool, docData.label);
         if(docIcon){
           const fixedDocIcon = fixDriveUrl(docIcon);
           const docClipId = `doc-clip-${filtId}-${seIdx}-${docIdx}`;
@@ -1227,11 +1234,13 @@ function renderMasteryView(){
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB * 1.6}" fill="url(#node-halo-${filtId})"/>`;
 
       // Nœud sous-élément avec petit anneau extérieur
+      // Fill dégradé si pas d'icône, sinon fond sombre pour l'image
+      const seIcon = getMasterIcon(commonSchool, seData.label);
+      const seFill = seIcon ? '#0f1520' : `url(#node-fill-${filtId})`;
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB + 8}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.35"/>`;
-      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="#0f1520" stroke="${color}" stroke-width="2" filter="url(#${filtId})"/>`;
+      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="${seFill}" stroke="${color}" stroke-width="2" filter="url(#${filtId})"/>`;
 
       // Icône Master pour le sous-élément (format: icon_evocation_feu)
-      const seIcon = getMasterIcon(commonSchool, seData.label);
       if(seIcon){
         const fixedSeIcon = fixDriveUrl(seIcon);
         const seClipId = `se-clip-${filtId}-${seIdx}`;
@@ -1268,10 +1277,8 @@ function renderMasteryView(){
     // Format préféré : icon_evocation_feu (école + élément)
     // Fallback : icon_evocation, puis icon_feu
     const rootIcon = getMasterIcon(commonSchool, groupKey);
-    console.log('[Icon Debug] commonSchool:', commonSchool, '| groupKey:', groupKey, '| rootIcon:', rootIcon, '| MASTER_ICONS keys:', Object.keys(MASTER_ICONS));
     if(rootIcon){
       const fixedRootIcon = fixDriveUrl(rootIcon);
-      console.log('[Icon Debug] fixedRootIcon:', fixedRootIcon, '| isImage:', iconIsImage(fixedRootIcon));
       const iconSize = R_ROOT * 1.2;
       if(iconIsImage(fixedRootIcon)){
         html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${R_ROOT - 3}"/></clipPath>
