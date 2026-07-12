@@ -515,18 +515,21 @@ async function loadData(){
   if(DATA_SHEETS.master){
     try{
       const rows = await fetchCSV(DATA_SHEETS.master);
+      console.log('[Master] Rows loaded:', rows.length);
       rows.forEach(r => {
         const id = (r.id || r.parametre || '').trim().toLowerCase();
         const val = (r.valeur || r.value || '').trim();
         if(!id || !val) return;
         if(id === 'mj_password' || id === 'password'){
           mjPassword = val;
+          console.log('[Master] MJ password loaded from row:', id);
         } else if(id.startsWith('icon_')){
-          // icon_evocation, icon_feu, icon_combustion, etc.
-          const key = id.slice(5); // retire "icon_"
+          const key = id.slice(5);
           MASTER_ICONS[key] = val;
+          console.log('[Master] Icon loaded:', key, '=', val.slice(0, 40));
         }
       });
+      console.log('[Master] Final: password =', mjPassword ? '(set)' : '(EMPTY!)', '| icons =', Object.keys(MASTER_ICONS).length);
     } catch(err){ console.warn('Master inaccessible :', err); }
   }
 
