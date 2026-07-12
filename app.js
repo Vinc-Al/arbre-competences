@@ -952,30 +952,52 @@ function renderMasteryView(){
         </g>`;
       });
 
-      html += `</svg>`;
-
-      // Fiche de l'effet sélectionné pour ce groupe
-      const chosenEf = effects.find(ef => ef.id === chosen);
-      if(chosenEf){
-        const ic = effectIcon(chosenEf);
-        const iconMarkup = iconIsImage(ic)
-          ? `<img class="mst-effect-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
-          : `<span class="mst-effect-emoji">${ic}</span>`;
-        const blabel = brancheLabel(chosenEf);
-        html += `<div class="mst-effect-card chosen" data-eid="${chosenEf.id}" data-ckey="${ckey}"
-          style="border-color:${color};background:color-mix(in srgb,${color} 8%,transparent)">
-          <div class="mst-effect-name" style="color:${color}">
-            ${iconMarkup}${chosenEf.nom}
-            <span class="mst-chosen-badge" style="background:${color}">✓</span>
-          </div>
-          ${gi.school?`<div class="mst-effect-school">🏫 ${gi.school}</div>`:''}
-          ${blabel?`<div class="mst-effect-branche">🔗 ${blabel}</div>`:''}
-          <div class="mst-effect-desc">${parseRichText(chosenEf.description)}</div>
-        </div>`;
-      }
-      html += `</div>`; // end group block
+      html += `</svg></div>`; // end group block (svg + wrapper)
     });
     html += `</div>`; // end groups wrap
+
+    // ── Panneau latéral droit : effets sélectionnés (roller horizontal) ────
+    // Collecte tous les effets sélectionnés à travers TOUS les groupes du tier
+    const selectedEffects = [];
+    groupKeys.forEach(gk => {
+      const gi2 = parseGroupe(gk);
+      const chosenId = masteryChoices[gi2.ckey];
+      if(chosenId){
+        const ef = groupMap[gk].find(e => e.id === chosenId);
+        if(ef) selectedEffects.push({ effect: ef, group: gi2 });
+      }
+    });
+
+    if(selectedEffects.length){
+      html += `<div class="mst-side-panel">`;
+      html += `<div class="mst-side-header">
+        <span class="mst-side-title" style="color:${color}">Effets sélectionnés — T${_masteryActiveTier}</span>
+        <span class="mst-side-count">${selectedEffects.length} effet${selectedEffects.length>1?'s':''}</span>
+      </div>`;
+      html += `<div class="mst-side-scroll">`;
+      selectedEffects.forEach(({ effect: ef, group: gi2 }) => {
+        const ic = effectIcon(ef);
+        const iconMarkup = iconIsImage(ic)
+          ? `<img class="mst-side-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
+          : `<span class="mst-side-icon-emoji">${ic}</span>`;
+        const blabel = brancheLabel(ef);
+        html += `<div class="mst-side-card" style="--ec-color:${color}">
+          <div class="mst-side-card-head">
+            <div class="mst-side-card-icon">${iconMarkup}</div>
+            <div class="mst-side-card-title">
+              <div class="mst-side-card-tier" style="color:${color}">T${_masteryActiveTier} · ${tierNoms[_masteryActiveTier] || ''}</div>
+              <div class="mst-side-card-name">${ef.nom}</div>
+            </div>
+          </div>
+          <div class="mst-side-card-tags">
+            ${gi2.school?`<span class="mst-effect-school">🏫 ${gi2.school}</span>`:''}
+            ${blabel?`<span class="mst-effect-branche">🔗 ${blabel}</span>`:''}
+          </div>
+          <div class="mst-side-card-desc">${parseRichText(ef.description)}</div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    }
   }
 
   if(card.regle){
