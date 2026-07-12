@@ -911,86 +911,125 @@ function renderMasteryView(){
   });
   const groupKeys = Object.keys(groupMap);
 
-  // ── Un diagramme SVG par groupe ────────────────────────────────────────
+  // ── Diagramme UNIFIÉ : école racine → sous-éléments → effets ─────────
   if(!activeEffects.length){
     html += `<div class="mst-no-effects">Aucun effet disponible à T${_masteryActiveTier}.</div>`;
   } else {
-    html += `<div class="mst-groups-wrap">`;
+    // Regrouper les groupes par sous-élément et détecter l'école commune
+    const bySouselem = {};
+    let commonSchool = '';
     groupKeys.forEach(gk => {
-      const effects = groupMap[gk];
       const gi = parseGroupe(gk);
-      const ckey = gi.ckey;
-      const chosen = masteryChoices[ckey];
-      const n = effects.length;
+      const seKey = gi.souselem || 'default';
+      if(!bySouselem[seKey]) bySouselem[seKey] = { gi, groups: [] };
+      bySouselem[seKey].groups.push({ gk, effects: groupMap[gk], gi });
+      if(gi.school && !commonSchool) commonSchool = gi.school;
+    });
+    const souselemKeys = Object.keys(bySouselem);
+    const nSouselem = souselemKeys.length;
 
-      // SVG dimensions avec marges pour les labels au hover
-      const SVG_W = 400, SVG_H = 380;
-      const CX = SVG_W/2, CY = SVG_H/2;
-      const RADIUS = Math.min(130, 75 + n * 14);
-      const NODE_R = 28, CENTER_R = 40;
+    // Dimensions du grand SVG unifié
+    // Layout : racine à gauche → sous-éléments verticalement au centre → effets à droite
+    const NODE_R = 26;
+    const CENTER_R = 45;      // nœud école
+    const SUB_R = 38;         // nœuds sous-élément
+    const ROOT_X = 90;        // école à gauche
+    const SUB_X = 340;        // sous-éléments au centre
+    const EFFECT_BASE_X = 560;// effets vers la droite
+    const V_GAP_SUB = 200;    // espacement vertical entre sous-éléments
+    const V_GAP_EFFECT = 75;  // espacement vertical entre effets d'un même sous-élément
 
-      const nodes = effects.map((ef,i) => {
-        const a = getAngle(i, n);
-        return { ef, nx:CX+RADIUS*Math.cos(a), ny:CY+RADIUS*Math.sin(a), a, isChosen:chosen===ef.id };
+    // Calculer les positions Y de chaque sous-élément et de ses effets
+    let currentY = 100;
+    const placements = souselemKeys.map(seKey => {
+      const seData = bySouselem[seKey];
+      const totalEffects = seData.groups.reduce((sum, g) => sum + g.effects.length, 0);
+      const blockHeight = Math.max(V_GAP_SUB, totalEffects * V_GAP_EFFECT + 40);
+      const seY = currentY + blockHeight / 2;
+      // Placer les effets répartis verticalement autour du sous-élément
+      const effectsFlat = [];
+      seData.groups.forEach(g => g.effects.forEach(ef => effectsFlat.push({ ef, gk: g.gk, gi: g.gi })));
+      const nEff = effectsFlat.length;
+      const startEffY = seY - ((nEff - 1) * V_GAP_EFFECT) / 2;
+      const effectPositions = effectsFlat.map((eff, i) => ({
+        ...eff,
+        x: EFFECT_BASE_X,
+        y: startEffY + i * V_GAP_EFFECT,
+      }));
+      const placement = { seKey, seData, seY, effectPositions, blockHeight };
+      currentY += blockHeight;
+      return placement;
+    });
+
+    const SVG_W = 900;
+    const SVG_H = Math.max(500, currentY + 60);
+    const ROOT_Y = SVG_H / 2;
+
+    const rootColor = color;
+    const filtId = `glow-unified-${groupKey.replace(/[^a-z0-9]/gi,'')}`;
+
+    html += `<div class="mst-unified-wrap">`;
+    html += `<svg class="mst-unified-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="${filtId}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>`;
+
+    // ── Étape 1 : lignes école → sous-éléments ───────────────────────────
+    placements.forEach(p => {
+      // Ligne coudée en L : horizontal puis vertical
+      const midX = (ROOT_X + SUB_X) / 2;
+      html += `<path d="M ${ROOT_X + CENTER_R} ${ROOT_Y} L ${midX} ${ROOT_Y} L ${midX} ${p.seY} L ${SUB_X - SUB_R} ${p.seY}"
+        stroke="${rootColor}" stroke-width="2" fill="none" opacity="0.6"/>`;
+    });
+
+    // ── Étape 2 : lignes sous-élément → effets ────────────────────────────
+    placements.forEach(p => {
+      p.effectPositions.forEach(({ ef, gk, gi, x, y }) => {
+        const chosen = masteryChoices[gi.ckey];
+        const isChosen = chosen === ef.id;
+        const midX = (SUB_X + EFFECT_BASE_X) / 2;
+        html += `<path d="M ${SUB_X + SUB_R} ${p.seY} L ${midX} ${p.seY} L ${midX} ${y} L ${x - NODE_R} ${y}"
+          stroke="${isChosen ? color : '#2a3344'}" stroke-width="${isChosen ? 2.5 : 1.5}"
+          fill="none" opacity="${isChosen ? 0.85 : 0.35}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
       });
+    });
 
-      html += `<div class="mst-group-block">`;
-      html += `<svg class="mst-diagram-svg" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">
-        <defs><filter id="glow-${ckey.replace(/[^a-z0-9]/gi,'')}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+    // ── Étape 3 : nœud école racine ───────────────────────────────────────
+    const rootLabel = commonSchool || card.titre || 'Élément';
+    html += `<circle cx="${ROOT_X}" cy="${ROOT_Y}" r="${CENTER_R}" fill="#0f1520" stroke="${rootColor}" stroke-width="3" filter="url(#${filtId})"/>
+      <text x="${ROOT_X}" y="${ROOT_Y - 4}" text-anchor="middle" fill="${rootColor}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${rootLabel}</text>
+      <text x="${ROOT_X}" y="${ROOT_Y + 12}" text-anchor="middle" fill="${rootColor}aa" font-family="Inter,sans-serif" font-size="9">T${_masteryActiveTier}</text>`;
 
-      const filtId = `glow-${ckey.replace(/[^a-z0-9]/gi,'')}`;
+    // ── Étape 4 : nœuds sous-éléments ─────────────────────────────────────
+    placements.forEach(p => {
+      const seLabel = p.seData.gi.souselem || card.titre;
+      html += `<circle cx="${SUB_X}" cy="${p.seY}" r="${SUB_R}" fill="#0f1520" stroke="${rootColor}" stroke-width="2.5" filter="url(#${filtId})"/>
+        <text x="${SUB_X}" y="${p.seY - 3}" text-anchor="middle" fill="${rootColor}" font-family="Cinzel,serif" font-size="12" font-weight="bold">${seLabel}</text>
+        <text x="${SUB_X}" y="${p.seY + 12}" text-anchor="middle" fill="${rootColor}aa" font-family="Inter,sans-serif" font-size="8.5">T${_masteryActiveTier}</text>`;
+    });
 
-      // Lignes centre→nœuds
-      nodes.forEach(({nx,ny,isChosen}) => {
-        html += `<line x1="${CX}" y1="${CY}" x2="${nx}" y2="${ny}"
-          stroke="${isChosen?color:'#2a3344'}" stroke-width="${isChosen?2.5:1.5}"
-          opacity="${isChosen?0.9:0.4}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
-      });
-
-      // Nœud central : afficher hiérarchiquement doctrine → sous-élément → tier → école
-      // Priorité d'affichage : doctrine si présente sinon souselem
-      const centerLabel = gi.doctrine || gi.souselem || `T${_masteryActiveTier}`;
-      const centerSub = gi.doctrine && gi.souselem ? gi.souselem : `T${_masteryActiveTier}`;
-      const hasThirdLine = gi.school || (gi.doctrine && gi.souselem);
-      html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#${filtId})"/>`;
-      if(hasThirdLine){
-        // 3 lignes : label, sub, école
-        html += `<text x="${CX}" y="${CY - 10}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="12" font-weight="bold">${centerLabel}</text>
-          <text x="${CX}" y="${CY + 2}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8">${centerSub}</text>`;
-        if(gi.school){
-          html += `<text x="${CX}" y="${CY + 14}" text-anchor="middle" fill="#a98ce0" font-family="Inter,sans-serif" font-size="7" font-weight="600">${gi.school}</text>`;
-        } else {
-          html += `<text x="${CX}" y="${CY + 14}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="7">T${_masteryActiveTier}</text>`;
-        }
-      } else {
-        // 2 lignes seulement
-        html += `<text x="${CX}" y="${CY - 6}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${centerLabel}</text>
-          <text x="${CX}" y="${CY + 10}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${centerSub}</text>`;
-      }
-
-      // Nœuds d'effets
-      nodes.forEach(({ef,nx,ny,a,isChosen}) => {
+    // ── Étape 5 : nœuds effets ────────────────────────────────────────────
+    placements.forEach(p => {
+      p.effectPositions.forEach(({ ef, gk, gi, x, y }) => {
+        const chosen = masteryChoices[gi.ckey];
+        const isChosen = chosen === ef.id;
         const ic = effectIcon(ef);
         const fc = isChosen ? color+'2e' : '#1b2230';
         const sc = isChosen ? color : '#3a4253';
-        const labelDist = NODE_R + 16;
-        const lx = nx + Math.cos(a)*labelDist;
-        const ly = ny + Math.sin(a)*labelDist;
-        const anchor = Math.abs(Math.cos(a)) < 0.35 ? 'middle' : (Math.cos(a) > 0 ? 'start' : 'end');
-        const tc = isChosen ? color : '#c4ccd8';
         const iconMarkup = iconIsImage(ic)
-          ? `<image href="${ic.replace(/"/g,'&quot;')}" x="${nx-16}" y="${ny-16}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`
-          : `<text x="${nx}" y="${ny+6}" text-anchor="middle" font-size="18">${ic}</text>`;
-        html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}">
-          <circle cx="${nx}" cy="${ny}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
+          ? `<image href="${ic.replace(/"/g,'&quot;')}" x="${x-16}" y="${y-16}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`
+          : `<text x="${x}" y="${y+6}" text-anchor="middle" font-size="18">${ic}</text>`;
+        const lx = x + NODE_R + 12;
+        const tc = isChosen ? color : '#c4ccd8';
+        html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${gi.ckey}">
+          <circle cx="${x}" cy="${y}" r="${NODE_R}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
           ${iconMarkup}
-          <text class="mst-node-label" x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="10" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
+          <text class="mst-node-label" x="${lx}" y="${y+3}" text-anchor="start" fill="${tc}" font-family="Inter,sans-serif" font-size="10.5" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
         </g>`;
       });
-
-      html += `</svg></div>`; // end group block (svg + wrapper)
     });
-    html += `</div>`; // end groups wrap
+
+    html += `</svg></div>`;
   }
 
   if(card.regle){
