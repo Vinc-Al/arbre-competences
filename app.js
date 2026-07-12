@@ -955,49 +955,6 @@ function renderMasteryView(){
       html += `</svg></div>`; // end group block (svg + wrapper)
     });
     html += `</div>`; // end groups wrap
-
-    // ── Panneau latéral droit : effets sélectionnés (roller horizontal) ────
-    // Collecte tous les effets sélectionnés à travers TOUS les groupes du tier
-    const selectedEffects = [];
-    groupKeys.forEach(gk => {
-      const gi2 = parseGroupe(gk);
-      const chosenId = masteryChoices[gi2.ckey];
-      if(chosenId){
-        const ef = groupMap[gk].find(e => e.id === chosenId);
-        if(ef) selectedEffects.push({ effect: ef, group: gi2 });
-      }
-    });
-
-    if(selectedEffects.length){
-      html += `<div class="mst-side-panel">`;
-      html += `<div class="mst-side-header">
-        <span class="mst-side-title" style="color:${color}">Effets sélectionnés — T${_masteryActiveTier}</span>
-        <span class="mst-side-count">${selectedEffects.length} effet${selectedEffects.length>1?'s':''}</span>
-      </div>`;
-      html += `<div class="mst-side-scroll">`;
-      selectedEffects.forEach(({ effect: ef, group: gi2 }) => {
-        const ic = effectIcon(ef);
-        const iconMarkup = iconIsImage(ic)
-          ? `<img class="mst-side-icon-img" src="${ic.replace(/"/g,'&quot;')}" alt="">`
-          : `<span class="mst-side-icon-emoji">${ic}</span>`;
-        const blabel = brancheLabel(ef);
-        html += `<div class="mst-side-card" style="--ec-color:${color}">
-          <div class="mst-side-card-head">
-            <div class="mst-side-card-icon">${iconMarkup}</div>
-            <div class="mst-side-card-title">
-              <div class="mst-side-card-tier" style="color:${color}">T${_masteryActiveTier} · ${tierNoms[_masteryActiveTier] || ''}</div>
-              <div class="mst-side-card-name">${ef.nom}</div>
-            </div>
-          </div>
-          <div class="mst-side-card-tags">
-            ${gi2.school?`<span class="mst-effect-school">🏫 ${gi2.school}</span>`:''}
-            ${blabel?`<span class="mst-effect-branche">🔗 ${blabel}</span>`:''}
-          </div>
-          <div class="mst-side-card-desc">${parseRichText(ef.description)}</div>
-        </div>`;
-      });
-      html += `</div></div>`;
-    }
   }
 
   if(card.regle){
@@ -1011,13 +968,97 @@ function renderMasteryView(){
   });
 
   container.querySelectorAll('[data-eid][data-ckey]').forEach(el=>{
+    // Simple clic → ouvrir le panneau latéral avec les détails de l'effet
     el.addEventListener('click', ()=>{
+      const eid = el.getAttribute('data-eid');
+      const ckey = el.getAttribute('data-ckey');
+      // Chercher l'effet dans les groupes du tier actif
+      let effect = null, gInfo = null;
+      Object.keys(groupMap).forEach(gk => {
+        const found = groupMap[gk].find(e => e.id === eid);
+        if(found){ effect = found; gInfo = parseGroupe(gk); }
+      });
+      if(effect) openElementalEffectPanel(effect, gInfo, ckey);
+    });
+    // Double-clic → sélectionner/désélectionner comme choix de maîtrise
+    el.addEventListener('dblclick', ()=>{
       const eid=el.getAttribute('data-eid'), ckey=el.getAttribute('data-ckey');
       masteryChoices[ckey] = (masteryChoices[ckey]===eid) ? null : eid;
       renderMasteryView();
       if(typeof savePlayerChoices==='function') savePlayerChoices();
     });
   });
+}
+
+// Ouvre le panneau latéral droit avec les détails d'un effet élémentaire
+// (utilise le même #panel que pour les sorts, avec le style Impact ciblé)
+function openElementalEffectPanel(effect, groupInfo, ckey){
+  const group = getActiveGroup();
+  if(!group) return;
+  const { theme, card } = group;
+  const color = theme.color;
+  const tierNoms = card.tiers_noms || [];
+  const tierNom = tierNoms[_masteryActiveTier] || `Tier ${_masteryActiveTier}`;
+  const isChosen = masteryChoices[ckey] === effect.id;
+
+  // Header du panneau
+  document.getElementById('panel-tier').textContent = `${card.titre} · ${tierNom}`;
+  document.getElementById('panel-rank').textContent = `T${_masteryActiveTier}`;
+  document.getElementById('panel-rank').style.color = color;
+  document.getElementById('panel-title').textContent = effect.nom;
+
+  // Icône
+  const iconEl = document.getElementById('panel-icon');
+  const ic = effect.icone || '❓';
+  const fixedIc = fixDriveUrl(ic);
+  if(iconIsImage(fixedIc)){
+    iconEl.innerHTML = `<img src="${fixedIc.replace(/"/g,'&quot;')}" alt="">`;
+  } else {
+    iconEl.innerHTML = fixedIc;
+  }
+  iconEl.style.borderColor = color;
+  iconEl.style.boxShadow = `0 0 16px ${color}44`;
+
+  // Corps
+  const blabel = brancheLabelHelper(effect);
+  const tags = [];
+  if(groupInfo && groupInfo.school){
+    tags.push(`<span class="mst-effect-school">🏫 ${groupInfo.school}</span>`);
+  }
+  if(blabel){
+    tags.push(`<span class="mst-effect-branche">🔗 ${blabel}</span>`);
+  }
+
+  const body = document.getElementById('panel-body');
+  body.innerHTML = `
+    ${tags.length ? `<div class="panel-tags">${tags.join('')}</div>` : ''}
+    <p class="rank-description">${parseRichText(effect.description) || 'Aucune description fournie.'}</p>
+  `;
+
+  // Footer avec bouton de sélection
+  const footer = document.getElementById('panel-footer');
+  footer.innerHTML = `
+    <button class="panel-select-btn ${isChosen?'selected':''}" id="panel-elem-toggle"
+      style="border-color:${color};color:${isChosen?'#0a0e14':color};background:${isChosen?color:'transparent'}">
+      ${isChosen ? '✓ Sélectionné (cliquer pour désélectionner)' : 'Sélectionner cet effet'}
+    </button>
+  `;
+
+  document.getElementById('panel-elem-toggle').addEventListener('click', () => {
+    masteryChoices[ckey] = (masteryChoices[ckey] === effect.id) ? null : effect.id;
+    renderMasteryView();
+    openElementalEffectPanel(effect, groupInfo, ckey); // refresh
+    if(typeof savePlayerChoices === 'function') savePlayerChoices();
+  });
+
+  // Ouvrir le panneau
+  document.getElementById('panel').classList.add('open');
+}
+
+// Helper pour l'étiquette de branche d'un effet (utilisé par openElementalEffectPanel)
+function brancheLabelHelper(ef){
+  if(!ef.branches || ef.branches === '*') return '';
+  return ef.branches.split(',').map(b => b.trim().replace(/_/g,' ')).join(', ');
 }
 
 /* =========================================================
