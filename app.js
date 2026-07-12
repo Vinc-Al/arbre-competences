@@ -1268,8 +1268,10 @@ function renderMasteryView(){
     // Format préféré : icon_evocation_feu (école + élément)
     // Fallback : icon_evocation, puis icon_feu
     const rootIcon = getMasterIcon(commonSchool, groupKey);
+    console.log('[Icon Debug] commonSchool:', commonSchool, '| groupKey:', groupKey, '| rootIcon:', rootIcon, '| MASTER_ICONS keys:', Object.keys(MASTER_ICONS));
     if(rootIcon){
       const fixedRootIcon = fixDriveUrl(rootIcon);
+      console.log('[Icon Debug] fixedRootIcon:', fixedRootIcon, '| isImage:', iconIsImage(fixedRootIcon));
       const iconSize = R_ROOT * 1.2;
       if(iconIsImage(fixedRootIcon)){
         html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${R_ROOT - 3}"/></clipPath>
