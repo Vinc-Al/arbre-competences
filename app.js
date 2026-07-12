@@ -1151,11 +1151,11 @@ function renderMasteryView(){
 
         // Orbite subtile autour de la doctrine (montre les talents qui gravitent)
         if(docData.effects.length > 0){
-          html += `<circle cx="${docX}" cy="${docY}" r="${R_EFFECT_ORBIT}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.08" stroke-dasharray="1 5"/>`;
+          html += `<circle cx="${docX}" cy="${docY}" r="${R_EFFECT_ORBIT}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.08" stroke-dasharray="1 5" pointer-events="none"/>`;
         }
 
         // Halo autour de la doctrine
-        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC * 1.5}" fill="url(#node-halo-${filtId})"/>`;
+        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC * 1.5}" fill="url(#node-halo-${filtId})" pointer-events="none"/>`;
 
         // Anneau extérieur + nœud doctrine
         // Fill dégradé (gradient radial coloré) si pas d'icône, sinon fond sombre
