@@ -6,6 +6,9 @@
    détail, système de points et déblocage MJ.
    ========================================================= */
 
+// Liste des écoles reconnues pour la colonne "groupe" de la maîtrise élémentaire
+const MASTERY_ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
+
 function parseCSV(text){
   const rows = [];
   let row = [], field = '', inQuotes = false;
@@ -866,20 +869,18 @@ function renderMasteryView(){
   //   "souselem"                  → Ex: acide                    (pas de restriction d'école)
   //   vide                        → tous dans un seul cercle par défaut
   
-  const ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
-  
   function parseGroupe(gk, tierIdx){
     const t = tierIdx !== undefined ? tierIdx : _masteryActiveTier;
     if(!gk || gk === '_default') return { school: '', souselem: '', doctrine: '', label: '', ckey: `${groupKey}_t${t}` };
     const parts = gk.split('_');
     let school = '', souselem = '', doctrine = '';
 
-    if(parts.length >= 3 && ECOLES.includes(parts[0])){
+    if(parts.length >= 3 && MASTERY_ECOLES.includes(parts[0])){
       // ecole_souselem_doctrine
       school = parts[0];
       souselem = parts[1];
       doctrine = parts.slice(2).join(' ');
-    } else if(parts.length === 2 && ECOLES.includes(parts[0])){
+    } else if(parts.length === 2 && MASTERY_ECOLES.includes(parts[0])){
       // ecole_souselem (pas de doctrine)
       school = parts[0];
       souselem = parts[1];
@@ -892,7 +893,6 @@ function renderMasteryView(){
     }
 
     const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
-    // Label affiché = doctrine si présente, sinon sous-élément
     const label = cap(doctrine) || cap(souselem);
     return {
       school: cap(school),
