@@ -9,6 +9,15 @@
 // Liste des écoles reconnues pour la colonne "groupe" de la maîtrise élémentaire
 const MASTERY_ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
 
+// Récupère une icône depuis MASTER_ICONS pour une clé donnée (école, sous-élément, doctrine)
+// Retourne null si aucune icône n'est définie.
+// Comparaison insensible à la casse et aux accents.
+function getMasterIcon(key){
+  if(!key || typeof MASTER_ICONS === 'undefined') return null;
+  const norm = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return MASTER_ICONS[norm] || MASTER_ICONS[key.toLowerCase()] || null;
+}
+
 function parseCSV(text){
   const rows = [];
   let row = [], field = '', inQuotes = false;
@@ -502,14 +511,21 @@ async function loadData(){
     } catch(err){ console.warn('Sauvegardes inaccessibles :', err); }
   }
 
-  // ─── 6. MOT DE PASSE MJ depuis DATA_SHEETS.master ─────────────────────────
+  // ─── 6. MOT DE PASSE MJ + ICÔNES depuis DATA_SHEETS.master ─────────────────
   if(DATA_SHEETS.master){
     try{
       const rows = await fetchCSV(DATA_SHEETS.master);
       rows.forEach(r => {
         const id = (r.id || r.parametre || '').trim().toLowerCase();
         const val = (r.valeur || r.value || '').trim();
-        if(id === 'mj_password' || id === 'password') mjPassword = val;
+        if(!id || !val) return;
+        if(id === 'mj_password' || id === 'password'){
+          mjPassword = val;
+        } else if(id.startsWith('icon_')){
+          // icon_evocation, icon_feu, icon_combustion, etc.
+          const key = id.slice(5); // retire "icon_"
+          MASTER_ICONS[key] = val;
+        }
       });
     } catch(err){ console.warn('Master inaccessible :', err); }
   }
@@ -942,18 +958,18 @@ function renderMasteryView(){
     const nSouselem = souselemKeys.length;
 
     // Dimensions du SVG polaire
-    const SVG_SIZE = 900;
+    const SVG_SIZE = 1000;
     const CX = SVG_SIZE / 2;
     const CY = SVG_SIZE / 2;
 
-    // Rayons orbitaux
-    const R_ROOT = 55;       // école centrale
-    const R_SUB_ORBIT = 180; // distance école → sous-éléments
-    const R_SUB = 45;        // taille des nœuds sous-éléments
-    const R_DOC_ORBIT = 130; // distance sous-élément → doctrines
-    const R_DOC = 32;        // taille des nœuds doctrines
-    const R_EFFECT_ORBIT = 90; // distance doctrine → effets
-    const R_EFFECT = 24;     // taille des nœuds effets
+    // Rayons orbitaux (ajustés pour éviter les collisions)
+    const R_ROOT = 60;       // école centrale
+    const R_SUB_ORBIT = 210; // distance école → sous-éléments
+    const R_SUB = 48;        // taille des nœuds sous-éléments
+    const R_DOC_ORBIT = 150; // distance sous-élément → doctrines
+    const R_DOC = 34;        // taille des nœuds doctrines
+    const R_EFFECT_ORBIT = 100; // distance doctrine → effets
+    const R_EFFECT = 25;     // taille des nœuds effets
 
     const filtId = `glow-polar-${groupKey.replace(/[^a-z0-9]/gi,'')}`;
 
@@ -992,7 +1008,12 @@ function renderMasteryView(){
     // Halo radial de fond derrière l'école
     html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT + 140}" fill="url(#root-halo-${filtId})"/>`;
 
-    // Grande orbite pointillée avec petits diamants scintillants
+    // Orbites de gravitation subtiles (sous-éléments et doctrines)
+    // Ces cercles très légers rappellent le système solaire du concept art
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT + 55}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.08"/>`;
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT + 90}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.05"/>`;
+
+    // Grande orbite pointillée avec petits diamants scintillants (orbite principale des sous-éléments)
     const N_ORBIT_DOTS = 32;
     html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="1 8" opacity="0.35"/>`;
     // Points scintillants sur l'orbite
@@ -1106,6 +1127,11 @@ function renderMasteryView(){
           </g>`;
         });
 
+        // Orbite subtile autour de la doctrine (montre les talents qui gravitent)
+        if(docData.effects.length > 0){
+          html += `<circle cx="${docX}" cy="${docY}" r="${R_EFFECT_ORBIT}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.08" stroke-dasharray="1 5"/>`;
+        }
+
         // Halo autour de la doctrine
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC * 1.5}" fill="url(#node-halo-${filtId})"/>`;
 
@@ -1113,8 +1139,22 @@ function renderMasteryView(){
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC + 5}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.3"/>`;
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="#0f1520" stroke="${color}" stroke-width="1.8" filter="url(#${filtId})"/>`;
 
+        // Icône Master pour la doctrine
+        const docIcon = getMasterIcon(docData.label);
+        if(docIcon){
+          const fixedDocIcon = fixDriveUrl(docIcon);
+          const docClipId = `doc-clip-${filtId}-${seIdx}-${docIdx}`;
+          if(iconIsImage(fixedDocIcon)){
+            html += `<clipPath id="${docClipId}"><circle cx="${docX}" cy="${docY}" r="${R_DOC - 2}"/></clipPath>
+              <image href="${fixedDocIcon.replace(/"/g,'&quot;')}" x="${docX - R_DOC + 2}" y="${docY - R_DOC + 2}" width="${R_DOC*2 - 4}" height="${R_DOC*2 - 4}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${docClipId})"/>`;
+          } else {
+            html += `<text x="${docX}" y="${docY + 5}" text-anchor="middle" font-size="${R_DOC * 0.9}">${fixedDocIcon}</text>`;
+          }
+        }
+
         // Label doctrine : positionné à l'extérieur du sous-élément
-        const docLabelDist = R_DOC + 15;
+        // Distance ajustée pour éviter les collisions avec les effets qui viennent après
+        const docLabelDist = R_DOC + 18 + (nDoctrines > 3 ? 6 : 0);
         const docLabelX = docX + docLabelDist * Math.cos(docAngle);
         const docLabelY = docY + docLabelDist * Math.sin(docAngle);
         const docLabelAnchor = Math.abs(Math.cos(docAngle)) < 0.3 ? 'middle' : (Math.cos(docAngle) > 0 ? 'start' : 'end');
@@ -1161,6 +1201,11 @@ function renderMasteryView(){
         });
       }
 
+      // Orbite subtile autour du sous-élément (montre les doctrines qui gravitent)
+      if(Object.keys(seData.doctrines).length > 0){
+        html += `<circle cx="${seX}" cy="${seY}" r="${R_DOC_ORBIT}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.1" stroke-dasharray="1 6"/>`;
+      }
+
       // Halo autour du sous-élément
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB * 1.6}" fill="url(#node-halo-${filtId})"/>`;
 
@@ -1168,8 +1213,22 @@ function renderMasteryView(){
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB + 8}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.35"/>`;
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="#0f1520" stroke="${color}" stroke-width="2" filter="url(#${filtId})"/>`;
 
+      // Icône Master pour le sous-élément
+      const seIcon = getMasterIcon(seData.label);
+      if(seIcon){
+        const fixedSeIcon = fixDriveUrl(seIcon);
+        const seClipId = `se-clip-${filtId}-${seIdx}`;
+        if(iconIsImage(fixedSeIcon)){
+          html += `<clipPath id="${seClipId}"><circle cx="${seX}" cy="${seY}" r="${R_SUB - 3}"/></clipPath>
+            <image href="${fixedSeIcon.replace(/"/g,'&quot;')}" x="${seX - R_SUB + 3}" y="${seY - R_SUB + 3}" width="${R_SUB*2 - 6}" height="${R_SUB*2 - 6}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${seClipId})"/>`;
+        } else {
+          html += `<text x="${seX}" y="${seY + 7}" text-anchor="middle" font-size="${R_SUB * 0.95}">${fixedSeIcon}</text>`;
+        }
+      }
+
       // Label sous-élément : positionné à l'extérieur, opposé au centre
-      const seLabelDist = R_SUB + 18;
+      // Distance ajustée pour éviter les collisions quand il y a beaucoup de sous-éléments
+      const seLabelDist = R_SUB + 22 + (nSouselem > 4 ? 8 : 0);
       const seLabelX = seX + seLabelDist * Math.cos(seAngle);
       const seLabelY = seY + seLabelDist * Math.sin(seAngle);
       const seLabelAnchor = Math.abs(Math.cos(seAngle)) < 0.3 ? 'middle' : (Math.cos(seAngle) > 0 ? 'start' : 'end');
@@ -1187,6 +1246,19 @@ function renderMasteryView(){
     // Nœud école racine avec gradient radial
     const rootLabel = commonSchool || card.titre || 'Élément';
     html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT}" fill="url(#root-fill-${filtId})" stroke="${color}" stroke-width="2" filter="url(#${filtId}-strong)"/>`;
+
+    // Icône de l'école depuis MASTER_ICONS (si définie)
+    const rootIcon = getMasterIcon(commonSchool) || getMasterIcon(rootLabel);
+    if(rootIcon){
+      const fixedRootIcon = fixDriveUrl(rootIcon);
+      const iconSize = R_ROOT * 1.2;
+      if(iconIsImage(fixedRootIcon)){
+        html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${R_ROOT - 3}"/></clipPath>
+          <image href="${fixedRootIcon.replace(/"/g,'&quot;')}" x="${CX - R_ROOT + 3}" y="${CY - R_ROOT + 3}" width="${R_ROOT*2 - 6}" height="${R_ROOT*2 - 6}" preserveAspectRatio="xMidYMid slice" clip-path="url(#root-clip-${filtId})"/>`;
+      } else {
+        html += `<text x="${CX}" y="${CY + 10}" text-anchor="middle" font-size="${iconSize}">${fixedRootIcon}</text>`;
+      }
+    }
 
     // Label école : au-DESSUS du cœur (comme "FEU / Manifestation" dans le concept)
     html += `<text x="${CX}" y="${CY - R_ROOT - 30}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="18" font-weight="bold" letter-spacing="3">${rootLabel.toUpperCase()}</text>
