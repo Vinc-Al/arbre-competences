@@ -960,21 +960,56 @@ function renderMasteryView(){
     html += `<div class="mst-polar-wrap">`;
     html += `<svg class="mst-polar-svg" viewBox="0 0 ${SVG_SIZE} ${SVG_SIZE}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <filter id="${filtId}"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <radialGradient id="root-glow-${filtId}" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.15"/>
+        <filter id="${filtId}" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="${filtId}-strong" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur stdDeviation="8" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="root-halo-${filtId}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+          <stop offset="45%" stop-color="${color}" stop-opacity="0.08"/>
           <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
         </radialGradient>
+        <radialGradient id="node-halo-${filtId}" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.35"/>
+          <stop offset="60%" stop-color="${color}" stop-opacity="0.05"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="root-fill-${filtId}" cx="45%" cy="40%" r="65%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
+          <stop offset="55%" stop-color="${color}" stop-opacity="0.4"/>
+          <stop offset="100%" stop-color="#0a0e14" stop-opacity="0.95"/>
+        </radialGradient>
+        <linearGradient id="line-fade-${filtId}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0.15"/>
+        </linearGradient>
       </defs>`;
 
-    // Halo de fond
-    html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT + 100}" fill="url(#root-glow-${filtId})"/>`;
+    // Halo radial de fond derrière l'école
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT + 140}" fill="url(#root-halo-${filtId})"/>`;
 
-    // Cercles d'orbite (guides visuels très légers)
-    html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="2 6" opacity="0.15"/>`;
+    // Grande orbite pointillée avec petits diamants scintillants
+    const N_ORBIT_DOTS = 32;
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_SUB_ORBIT}" fill="none" stroke="${color}" stroke-width="1" stroke-dasharray="1 8" opacity="0.35"/>`;
+    // Points scintillants sur l'orbite
+    for(let i = 0; i < N_ORBIT_DOTS; i++){
+      const a = (2 * Math.PI * i) / N_ORBIT_DOTS;
+      const ox = CX + R_SUB_ORBIT * Math.cos(a);
+      const oy = CY + R_SUB_ORBIT * Math.sin(a);
+      const r = i % 8 === 0 ? 2.5 : 1.2;
+      const opacity = i % 8 === 0 ? 0.75 : 0.35;
+      html += `<circle cx="${ox}" cy="${oy}" r="${r}" fill="${color}" opacity="${opacity}"/>`;
+    }
+    // Petit diamant en haut de l'orbite (comme dans le concept art)
+    html += `<g transform="translate(${CX} ${CY - R_SUB_ORBIT}) rotate(45)">
+      <rect x="-4" y="-4" width="8" height="8" fill="${color}" opacity="0.75"/>
+    </g>`;
 
     // Positionner les sous-éléments en cercle autour de l'école
-    // Angle : si un seul, placé à droite. Si plusieurs, répartis uniformément.
     souselemKeys.forEach((seKey, seIdx) => {
       const seData = hierarchy[seKey];
       const seAngle = (nSouselem === 1)
@@ -983,10 +1018,19 @@ function renderMasteryView(){
       const seX = CX + R_SUB_ORBIT * Math.cos(seAngle);
       const seY = CY + R_SUB_ORBIT * Math.sin(seAngle);
 
-      // Ligne école → sous-élément
-      html += `<line x1="${CX + R_ROOT * Math.cos(seAngle)}" y1="${CY + R_ROOT * Math.sin(seAngle)}"
-        x2="${seX - R_SUB * Math.cos(seAngle)}" y2="${seY - R_SUB * Math.sin(seAngle)}"
-        stroke="${color}" stroke-width="2" opacity="0.5"/>`;
+      // Ligne école → sous-élément avec petits points scintillants
+      const lineStart = { x: CX + R_ROOT * Math.cos(seAngle), y: CY + R_ROOT * Math.sin(seAngle) };
+      const lineEnd = { x: seX - R_SUB * Math.cos(seAngle), y: seY - R_SUB * Math.sin(seAngle) };
+      html += `<line x1="${lineStart.x}" y1="${lineStart.y}" x2="${lineEnd.x}" y2="${lineEnd.y}"
+        stroke="${color}" stroke-width="1.2" opacity="0.55"/>`;
+      // Points scintillants le long de la ligne
+      const N_LINE_DOTS = 4;
+      for(let i = 1; i < N_LINE_DOTS; i++){
+        const t = i / N_LINE_DOTS;
+        const px = lineStart.x + (lineEnd.x - lineStart.x) * t;
+        const py = lineStart.y + (lineEnd.y - lineStart.y) * t;
+        html += `<circle cx="${px}" cy="${py}" r="1.5" fill="${color}" opacity="0.6"/>`;
+      }
 
       // Positionner les doctrines autour du sous-élément
       const doctrineKeys = Object.keys(seData.doctrines);
@@ -1006,10 +1050,18 @@ function renderMasteryView(){
         const docX = seX + R_DOC_ORBIT * Math.cos(docAngle);
         const docY = seY + R_DOC_ORBIT * Math.sin(docAngle);
 
-        // Ligne sous-élément → doctrine
-        html += `<line x1="${seX + R_SUB * Math.cos(docAngle)}" y1="${seY + R_SUB * Math.sin(docAngle)}"
-          x2="${docX - R_DOC * Math.cos(docAngle)}" y2="${docY - R_DOC * Math.sin(docAngle)}"
-          stroke="${color}" stroke-width="1.5" opacity="0.4" stroke-dasharray="4 3"/>`;
+        // Ligne sous-élément → doctrine avec points scintillants
+        const dLineStart = { x: seX + R_SUB * Math.cos(docAngle), y: seY + R_SUB * Math.sin(docAngle) };
+        const dLineEnd = { x: docX - R_DOC * Math.cos(docAngle), y: docY - R_DOC * Math.sin(docAngle) };
+        html += `<line x1="${dLineStart.x}" y1="${dLineStart.y}" x2="${dLineEnd.x}" y2="${dLineEnd.y}"
+          stroke="${color}" stroke-width="1" opacity="0.4"/>`;
+        const N_DOC_DOTS = 3;
+        for(let i = 1; i < N_DOC_DOTS; i++){
+          const t = i / N_DOC_DOTS;
+          const px = dLineStart.x + (dLineEnd.x - dLineStart.x) * t;
+          const py = dLineStart.y + (dLineEnd.y - dLineStart.y) * t;
+          html += `<circle cx="${px}" cy="${py}" r="1.2" fill="${color}" opacity="0.5"/>`;
+        }
 
         // Positionner les effets autour de la doctrine
         const nEff = docData.effects.length;
@@ -1054,10 +1106,20 @@ function renderMasteryView(){
           </g>`;
         });
 
-        // Nœud doctrine
-        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="#0f1520" stroke="${color}" stroke-width="2" opacity="0.9" filter="url(#${filtId})"/>
-          <text x="${docX}" y="${docY - 2}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="10.5" font-weight="bold">${docData.label}</text>
-          <text x="${docX}" y="${docY + 10}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="7">Doctrine</text>`;
+        // Halo autour de la doctrine
+        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC * 1.5}" fill="url(#node-halo-${filtId})"/>`;
+
+        // Anneau extérieur + nœud doctrine
+        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC + 5}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.3"/>`;
+        html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="#0f1520" stroke="${color}" stroke-width="1.8" filter="url(#${filtId})"/>`;
+
+        // Label doctrine : positionné à l'extérieur du sous-élément
+        const docLabelDist = R_DOC + 15;
+        const docLabelX = docX + docLabelDist * Math.cos(docAngle);
+        const docLabelY = docY + docLabelDist * Math.sin(docAngle);
+        const docLabelAnchor = Math.abs(Math.cos(docAngle)) < 0.3 ? 'middle' : (Math.cos(docAngle) > 0 ? 'start' : 'end');
+        html += `<text x="${docLabelX}" y="${docLabelY - 4}" text-anchor="${docLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="10" font-weight="bold" letter-spacing="1.5">${(docData.label || '').toUpperCase()}</text>
+          <text x="${docLabelX}" y="${docLabelY + 7}" text-anchor="${docLabelAnchor}" fill="${color}77" font-family="Inter,sans-serif" font-size="7.5" letter-spacing="0.3">Doctrine</text>`;
       });
 
       // Effets sans doctrine : les placer directement autour du sous-élément
@@ -1099,18 +1161,36 @@ function renderMasteryView(){
         });
       }
 
-      // Nœud sous-élément
-      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#${filtId})"/>
-        <text x="${seX}" y="${seY - 3}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${seData.label}</text>
-        <text x="${seX}" y="${seY + 12}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8">Sous-élément</text>`;
+      // Halo autour du sous-élément
+      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB * 1.6}" fill="url(#node-halo-${filtId})"/>`;
+
+      // Nœud sous-élément avec petit anneau extérieur
+      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB + 8}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.35"/>`;
+      html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="#0f1520" stroke="${color}" stroke-width="2" filter="url(#${filtId})"/>`;
+
+      // Label sous-élément : positionné à l'extérieur, opposé au centre
+      const seLabelDist = R_SUB + 18;
+      const seLabelX = seX + seLabelDist * Math.cos(seAngle);
+      const seLabelY = seY + seLabelDist * Math.sin(seAngle);
+      const seLabelAnchor = Math.abs(Math.cos(seAngle)) < 0.3 ? 'middle' : (Math.cos(seAngle) > 0 ? 'start' : 'end');
+      html += `<text x="${seLabelX}" y="${seLabelY - 6}" text-anchor="${seLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold" letter-spacing="2">${(seData.label || '').toUpperCase()}</text>
+        <text x="${seLabelX}" y="${seLabelY + 8}" text-anchor="${seLabelAnchor}" fill="${color}88" font-family="Inter,sans-serif" font-size="9" letter-spacing="0.5">Sous-élément</text>`;
     });
 
-    // Nœud école racine
+    // Halo étendu autour de l'école racine
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT * 2.2}" fill="url(#node-halo-${filtId})"/>`;
+
+    // Petits cercles concentriques autour de l'école (comme sur le concept art)
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT + 20}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.3"/>`;
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT + 38}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.18"/>`;
+
+    // Nœud école racine avec gradient radial
     const rootLabel = commonSchool || card.titre || 'Élément';
-    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT}" fill="#0f1520" stroke="${color}" stroke-width="3.5" filter="url(#${filtId})"/>
-      <text x="${CX}" y="${CY - 6}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="15" font-weight="bold">${rootLabel}</text>
-      <text x="${CX}" y="${CY + 8}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="9">T${_masteryActiveTier}</text>
-      <text x="${CX}" y="${CY + 22}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="8">${tierNoms[_masteryActiveTier] || ''}</text>`;
+    html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT}" fill="url(#root-fill-${filtId})" stroke="${color}" stroke-width="2" filter="url(#${filtId}-strong)"/>`;
+
+    // Label école : au-DESSUS du cœur (comme "FEU / Manifestation" dans le concept)
+    html += `<text x="${CX}" y="${CY - R_ROOT - 30}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="18" font-weight="bold" letter-spacing="3">${rootLabel.toUpperCase()}</text>
+      <text x="${CX}" y="${CY - R_ROOT - 12}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="10" letter-spacing="1">${tierNoms[_masteryActiveTier] || `T${_masteryActiveTier}`}</text>`;
 
     html += `</svg></div>`;
   }
