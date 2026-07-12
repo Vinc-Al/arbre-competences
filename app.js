@@ -9,13 +9,30 @@
 // Liste des écoles reconnues pour la colonne "groupe" de la maîtrise élémentaire
 const MASTERY_ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
 
-// Récupère une icône depuis MASTER_ICONS pour une clé donnée (école, sous-élément, doctrine)
-// Retourne null si aucune icône n'est définie.
+// Récupère une icône depuis MASTER_ICONS pour une clé donnée.
+// Signature : getMasterIcon(key) ou getMasterIcon(school, element)
+// Cherche d'abord `icon_school_element` (ex: icon_evocation_feu),
+// puis fallback sur `icon_element` (ex: icon_feu), puis `icon_school`.
 // Comparaison insensible à la casse et aux accents.
-function getMasterIcon(key){
-  if(!key || typeof MASTER_ICONS === 'undefined') return null;
-  const norm = key.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return MASTER_ICONS[norm] || MASTER_ICONS[key.toLowerCase()] || null;
+function getMasterIcon(key1, key2){
+  if(typeof MASTER_ICONS === 'undefined') return null;
+  function norm(s){
+    return s ? s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+  }
+  // Combiné : school_element
+  if(key1 && key2){
+    const combined = `${norm(key1)}_${norm(key2)}`;
+    if(MASTER_ICONS[combined]) return MASTER_ICONS[combined];
+    // fallback sur l'élément seul
+    if(MASTER_ICONS[norm(key2)]) return MASTER_ICONS[norm(key2)];
+    // fallback sur l'école seule
+    if(MASTER_ICONS[norm(key1)]) return MASTER_ICONS[norm(key1)];
+    return null;
+  }
+  // Simple clé
+  if(!key1) return null;
+  const n = norm(key1);
+  return MASTER_ICONS[n] || MASTER_ICONS[key1.toLowerCase()] || null;
 }
 
 function parseCSV(text){
@@ -1139,8 +1156,8 @@ function renderMasteryView(){
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC + 5}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.3"/>`;
         html += `<circle cx="${docX}" cy="${docY}" r="${R_DOC}" fill="#0f1520" stroke="${color}" stroke-width="1.8" filter="url(#${filtId})"/>`;
 
-        // Icône Master pour la doctrine
-        const docIcon = getMasterIcon(docData.label);
+        // Icône Master pour la doctrine (format: icon_evocation_combustion)
+        const docIcon = getMasterIcon(commonSchool, docData.label);
         if(docIcon){
           const fixedDocIcon = fixDriveUrl(docIcon);
           const docClipId = `doc-clip-${filtId}-${seIdx}-${docIdx}`;
@@ -1213,8 +1230,8 @@ function renderMasteryView(){
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB + 8}" fill="none" stroke="${color}" stroke-width="0.5" opacity="0.35"/>`;
       html += `<circle cx="${seX}" cy="${seY}" r="${R_SUB}" fill="#0f1520" stroke="${color}" stroke-width="2" filter="url(#${filtId})"/>`;
 
-      // Icône Master pour le sous-élément
-      const seIcon = getMasterIcon(seData.label);
+      // Icône Master pour le sous-élément (format: icon_evocation_feu)
+      const seIcon = getMasterIcon(commonSchool, seData.label);
       if(seIcon){
         const fixedSeIcon = fixDriveUrl(seIcon);
         const seClipId = `se-clip-${filtId}-${seIdx}`;
@@ -1248,7 +1265,9 @@ function renderMasteryView(){
     html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT}" fill="url(#root-fill-${filtId})" stroke="${color}" stroke-width="2" filter="url(#${filtId}-strong)"/>`;
 
     // Icône de l'école depuis MASTER_ICONS (si définie)
-    const rootIcon = getMasterIcon(commonSchool) || getMasterIcon(rootLabel);
+    // Format préféré : icon_evocation_feu (école + élément)
+    // Fallback : icon_evocation, puis icon_feu
+    const rootIcon = getMasterIcon(commonSchool, groupKey);
     if(rootIcon){
       const fixedRootIcon = fixDriveUrl(rootIcon);
       const iconSize = R_ROOT * 1.2;
