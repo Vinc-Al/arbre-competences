@@ -859,22 +859,48 @@ function renderMasteryView(){
   }
 
   // ── Grouper les effets par "groupe" ────────────────────────────────────
-  // Format du groupe : "ecole_sousgroupe" (ex: evocation_acide, abjuration_fel)
-  // ou juste "sousgroupe" (ex: acide) si pas de restriction d'école.
-  // Si vide → tous dans un seul cercle par défaut.
+  // Format du groupe (3 niveaux hiérarchiques) :
+  //   "ecole_souselem_doctrine"  → Ex: evocation_acide_predation (école + sous-élément + doctrine)
+  //   "ecole_souselem"            → Ex: evocation_acide          (école + sous-élément, doctrine = principal)
+  //   "ecole_doctrine"            → Ex: evocation_predation      (école + doctrine directe, sans sous-élément)
+  //   "souselem"                  → Ex: acide                    (pas de restriction d'école)
+  //   vide                        → tous dans un seul cercle par défaut
+  
+  const ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
   
   function parseGroupe(gk, tierIdx){
     const t = tierIdx !== undefined ? tierIdx : _masteryActiveTier;
-    if(!gk || gk === '_default') return { school: '', label: '', ckey: `${groupKey}_t${t}` };
-    const ECOLES = ['evocation','abjuration','invocation','transmutation','divination','illusion','enchantement','necromancie'];
+    if(!gk || gk === '_default') return { school: '', souselem: '', doctrine: '', label: '', ckey: `${groupKey}_t${t}` };
     const parts = gk.split('_');
-    if(parts.length >= 2 && ECOLES.includes(parts[0])){
-      const school = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-      const label = parts.slice(1).join(' ').charAt(0).toUpperCase() + parts.slice(1).join(' ').slice(1);
-      return { school, label, ckey: `${groupKey}_t${t}_${gk}` };
+    let school = '', souselem = '', doctrine = '';
+
+    if(parts.length >= 3 && ECOLES.includes(parts[0])){
+      // ecole_souselem_doctrine
+      school = parts[0];
+      souselem = parts[1];
+      doctrine = parts.slice(2).join(' ');
+    } else if(parts.length === 2 && ECOLES.includes(parts[0])){
+      // ecole_souselem (pas de doctrine)
+      school = parts[0];
+      souselem = parts[1];
+    } else if(parts.length === 1){
+      // juste un sous-élément
+      souselem = parts[0];
+    } else {
+      // fallback : tout comme label
+      souselem = parts.join(' ');
     }
-    const label = gk.charAt(0).toUpperCase() + gk.slice(1);
-    return { school: '', label, ckey: `${groupKey}_t${t}_${gk}` };
+
+    const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    // Label affiché = doctrine si présente, sinon sous-élément
+    const label = cap(doctrine) || cap(souselem);
+    return {
+      school: cap(school),
+      souselem: cap(souselem),
+      doctrine: cap(doctrine),
+      label,
+      ckey: `${groupKey}_t${t}_${gk}`,
+    };
   }
 
   const groupMap = {};
@@ -921,15 +947,25 @@ function renderMasteryView(){
           opacity="${isChosen?0.9:0.4}" ${isChosen?'':'stroke-dasharray="5 4"'}/>`;
       });
 
-      // Nœud central
-      const centerLabel = gi.label || `T${_masteryActiveTier}`;
-      const centerSub = gi.label ? `T${_masteryActiveTier}` : (tierNoms[_masteryActiveTier] || '');
-      html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#${filtId})"/>
-        <text x="${CX}" y="${CY - (gi.school ? 12 : 6)}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${centerLabel}</text>
-        <text x="${CX}" y="${CY + (gi.school ? 2 : 10)}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${centerSub}</text>`;
-      // Tag école dans le nœud central
-      if(gi.school){
-        html += `<text x="${CX}" y="${CY + 16}" text-anchor="middle" fill="#a98ce0" font-family="Inter,sans-serif" font-size="7.5" font-weight="600">${gi.school}</text>`;
+      // Nœud central : afficher hiérarchiquement doctrine → sous-élément → tier → école
+      // Priorité d'affichage : doctrine si présente sinon souselem
+      const centerLabel = gi.doctrine || gi.souselem || `T${_masteryActiveTier}`;
+      const centerSub = gi.doctrine && gi.souselem ? gi.souselem : `T${_masteryActiveTier}`;
+      const hasThirdLine = gi.school || (gi.doctrine && gi.souselem);
+      html += `<circle cx="${CX}" cy="${CY}" r="${CENTER_R}" fill="#0f1520" stroke="${color}" stroke-width="2.5" filter="url(#${filtId})"/>`;
+      if(hasThirdLine){
+        // 3 lignes : label, sub, école
+        html += `<text x="${CX}" y="${CY - 10}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="12" font-weight="bold">${centerLabel}</text>
+          <text x="${CX}" y="${CY + 2}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8">${centerSub}</text>`;
+        if(gi.school){
+          html += `<text x="${CX}" y="${CY + 14}" text-anchor="middle" fill="#a98ce0" font-family="Inter,sans-serif" font-size="7" font-weight="600">${gi.school}</text>`;
+        } else {
+          html += `<text x="${CX}" y="${CY + 14}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="7">T${_masteryActiveTier}</text>`;
+        }
+      } else {
+        // 2 lignes seulement
+        html += `<text x="${CX}" y="${CY - 6}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold">${centerLabel}</text>
+          <text x="${CX}" y="${CY + 10}" text-anchor="middle" fill="${color}aa" font-family="Inter,sans-serif" font-size="8.5">${centerSub}</text>`;
       }
 
       // Nœuds d'effets
@@ -1025,6 +1061,12 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
   const tags = [];
   if(groupInfo && groupInfo.school){
     tags.push(`<span class="mst-effect-school">🏫 ${groupInfo.school}</span>`);
+  }
+  if(groupInfo && groupInfo.souselem){
+    tags.push(`<span class="mst-effect-souselem" style="border-color:${color}66;color:${color};background:color-mix(in srgb, ${color} 10%, transparent)">✦ ${groupInfo.souselem}</span>`);
+  }
+  if(groupInfo && groupInfo.doctrine){
+    tags.push(`<span class="mst-effect-doctrine" style="border-color:${color}aa;color:${color}">◆ ${groupInfo.doctrine}</span>`);
   }
   if(blabel){
     tags.push(`<span class="mst-effect-branche">🔗 ${blabel}</span>`);
