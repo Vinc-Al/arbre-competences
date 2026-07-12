@@ -967,25 +967,26 @@ function renderMasteryView(){
     el.addEventListener('click', ()=>{ _masteryActiveTier=parseInt(el.getAttribute('data-tier')); renderMasteryView(); });
   });
 
-  container.querySelectorAll('[data-eid][data-ckey]').forEach(el=>{
-    // Simple clic → ouvrir le panneau latéral avec les détails de l'effet
-    el.addEventListener('click', ()=>{
+  // Handler du clic sur nœud d'effet : ouvre le panneau latéral (lecture seule)
+  // La sélection est faite dans le Google Sheet joueur, pas dans l'UI.
+  container.querySelectorAll('.mst-node-svg').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
       const eid = el.getAttribute('data-eid');
       const ckey = el.getAttribute('data-ckey');
-      // Chercher l'effet dans les groupes du tier actif
+      if(!eid) return;
+
+      // Chercher l'effet dans tous les groupes du tier actif
       let effect = null, gInfo = null;
-      Object.keys(groupMap).forEach(gk => {
+      for(const gk of Object.keys(groupMap)){
         const found = groupMap[gk].find(e => e.id === eid);
-        if(found){ effect = found; gInfo = parseGroupe(gk); }
-      });
+        if(found){
+          effect = found;
+          gInfo = parseGroupe(gk);
+          break;
+        }
+      }
       if(effect) openElementalEffectPanel(effect, gInfo, ckey);
-    });
-    // Double-clic → sélectionner/désélectionner comme choix de maîtrise
-    el.addEventListener('dblclick', ()=>{
-      const eid=el.getAttribute('data-eid'), ckey=el.getAttribute('data-ckey');
-      masteryChoices[ckey] = (masteryChoices[ckey]===eid) ? null : eid;
-      renderMasteryView();
-      if(typeof savePlayerChoices==='function') savePlayerChoices();
     });
   });
 }
@@ -1035,21 +1036,21 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
     <p class="rank-description">${parseRichText(effect.description) || 'Aucune description fournie.'}</p>
   `;
 
-  // Footer avec bouton de sélection
+  // Footer : indicateur de statut en lecture seule (le choix se fait dans le Sheet joueur)
   const footer = document.getElementById('panel-footer');
-  footer.innerHTML = `
-    <button class="panel-select-btn ${isChosen?'selected':''}" id="panel-elem-toggle"
-      style="border-color:${color};color:${isChosen?'#0a0e14':color};background:${isChosen?color:'transparent'}">
-      ${isChosen ? '✓ Sélectionné (cliquer pour désélectionner)' : 'Sélectionner cet effet'}
-    </button>
-  `;
-
-  document.getElementById('panel-elem-toggle').addEventListener('click', () => {
-    masteryChoices[ckey] = (masteryChoices[ckey] === effect.id) ? null : effect.id;
-    renderMasteryView();
-    openElementalEffectPanel(effect, groupInfo, ckey); // refresh
-    if(typeof savePlayerChoices === 'function') savePlayerChoices();
-  });
+  if(isChosen){
+    footer.innerHTML = `
+      <div class="panel-status-badge selected" style="border-color:${color};color:${color};background:color-mix(in srgb, ${color} 12%, transparent)">
+        ✓ Effet sélectionné pour ce joueur
+      </div>
+    `;
+  } else {
+    footer.innerHTML = `
+      <div class="panel-status-badge">
+        Non sélectionné
+      </div>
+    `;
+  }
 
   // Ouvrir le panneau
   document.getElementById('panel').classList.add('open');

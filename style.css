@@ -426,7 +426,9 @@
   .mst-group-block .mst-effect-card{
     width:100%; box-sizing:border-box;
   }
-  .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; }
+  .mst-node-svg{ cursor:pointer; transition:opacity 0.15s ease; pointer-events:all; }
+  .mst-node-svg *{ pointer-events:none; }
+  .mst-node-svg circle{ pointer-events:all; }
   .mst-node-svg:hover circle{ opacity:0.82; }
   .mst-node-label{ opacity:0; transition:opacity 0.2s ease; pointer-events:none; }
   .mst-node-svg:hover .mst-node-label{ opacity:1; }
@@ -472,20 +474,20 @@
     margin-bottom:14px;
   }
 
-  /* Bouton de sélection dans le footer du panneau (effets élémentaires) */
-  .panel-select-btn{
+  /* Badge de statut dans le footer du panneau (lecture seule) */
+  .panel-status-badge{
     width:100%;
-    font-family:'Inter',sans-serif; font-size:0.85rem;
-    padding:10px 16px; border-radius:8px; cursor:pointer;
-    border:1.5px solid;
-    transition:background 0.15s ease, color 0.15s ease;
-    font-weight:600;
+    font-family:'Inter',sans-serif; font-size:0.82rem;
+    padding:10px 16px; border-radius:8px;
+    border:1.5px solid var(--line-dim);
+    color:var(--text-1);
+    background:rgba(255,255,255,0.02);
+    text-align:center;
+    font-weight:500;
   }
-  .panel-select-btn:hover{
-    filter:brightness(1.15);
-  }
-  .panel-select-btn.selected{
+  .panel-status-badge.selected{
     font-weight:700;
+    box-shadow:0 0 12px rgba(0,0,0,0.2);
   }
   .mst-regle{
     font-family:'Inter',sans-serif; font-size:0.74rem; color:var(--text-1);
