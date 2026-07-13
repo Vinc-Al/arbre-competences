@@ -449,8 +449,9 @@
     pointer-events:none;
   }
   .mst-polar-svg .mst-node-svg{ pointer-events:all; cursor:pointer; }
-  .mst-polar-svg .mst-node-svg *{ pointer-events:none; }
   .mst-polar-svg .mst-node-svg circle{ pointer-events:all; }
+  .mst-polar-svg .mst-node-svg text,
+  .mst-polar-svg .mst-node-svg image{ pointer-events:none; }
   .mst-group-block{
     display:flex; flex-direction:column; align-items:center; gap:14px;
     width:100%;
