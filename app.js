@@ -1142,8 +1142,9 @@ function renderMasteryView(){
           const ly = effY + labelDist * Math.sin(effAngle);
           const anchor = Math.abs(Math.cos(effAngle)) < 0.3 ? 'middle' : (Math.cos(effAngle) > 0 ? 'start' : 'end');
           const tc = isChosen ? color : '#c4ccd8';
-          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}">
-            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
+          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
+            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT + 5}" fill="transparent" pointer-events="all"/>
+            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''} pointer-events="all"/>
             ${iconMarkup}
             <text class="mst-node-label" x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="9.5" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
           </g>`;
@@ -1182,8 +1183,7 @@ function renderMasteryView(){
         const docLabelX = docX + docLabelDist * Math.cos(docAngle);
         const docLabelY = docY + docLabelDist * Math.sin(docAngle);
         const docLabelAnchor = Math.abs(Math.cos(docAngle)) < 0.3 ? 'middle' : (Math.cos(docAngle) > 0 ? 'start' : 'end');
-        html += `<text x="${docLabelX}" y="${docLabelY - 4}" text-anchor="${docLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="10" font-weight="bold" letter-spacing="1.5">${(docData.label || '').toUpperCase()}</text>
-          <text x="${docLabelX}" y="${docLabelY + 7}" text-anchor="${docLabelAnchor}" fill="${color}77" font-family="Inter,sans-serif" font-size="7.5" letter-spacing="0.3">Doctrine</text>`;
+        html += `<text x="${docLabelX}" y="${docLabelY + 2}" text-anchor="${docLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="10" font-weight="bold" letter-spacing="1.5">${(docData.label || '').toUpperCase()}</text>`;
       });
 
       // Effets sans doctrine : les placer directement autour du sous-élément
@@ -1217,8 +1217,9 @@ function renderMasteryView(){
           const ly = effY + labelDist * Math.sin(effAngle);
           const anchor = Math.abs(Math.cos(effAngle)) < 0.3 ? 'middle' : (Math.cos(effAngle) > 0 ? 'start' : 'end');
           const tc = isChosen ? color : '#c4ccd8';
-          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}">
-            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''}/>
+          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
+            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT + 5}" fill="transparent" pointer-events="all"/>
+            <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''} pointer-events="all"/>
             ${iconMarkup}
             <text class="mst-node-label" x="${lx}" y="${ly+3}" text-anchor="${anchor}" fill="${tc}" font-family="Inter,sans-serif" font-size="9.5" font-weight="${isChosen?'700':'500'}">${ef.nom}</text>
           </g>`;
@@ -1258,8 +1259,7 @@ function renderMasteryView(){
       const seLabelX = seX + seLabelDist * Math.cos(seAngle);
       const seLabelY = seY + seLabelDist * Math.sin(seAngle);
       const seLabelAnchor = Math.abs(Math.cos(seAngle)) < 0.3 ? 'middle' : (Math.cos(seAngle) > 0 ? 'start' : 'end');
-      html += `<text x="${seLabelX}" y="${seLabelY - 6}" text-anchor="${seLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold" letter-spacing="2">${(seData.label || '').toUpperCase()}</text>
-        <text x="${seLabelX}" y="${seLabelY + 8}" text-anchor="${seLabelAnchor}" fill="${color}88" font-family="Inter,sans-serif" font-size="9" letter-spacing="0.5">Sous-élément</text>`;
+      html += `<text x="${seLabelX}" y="${seLabelY + 2}" text-anchor="${seLabelAnchor}" fill="${color}" font-family="Cinzel,serif" font-size="13" font-weight="bold" letter-spacing="2">${(seData.label || '').toUpperCase()}</text>`;
     });
 
     // Halo étendu autour de l'école racine
@@ -1273,10 +1273,10 @@ function renderMasteryView(){
     const rootLabel = commonSchool || card.titre || 'Élément';
     html += `<circle cx="${CX}" cy="${CY}" r="${R_ROOT}" fill="url(#root-fill-${filtId})" stroke="${color}" stroke-width="2" filter="url(#${filtId}-strong)"/>`;
 
-    // Icône de l'école depuis MASTER_ICONS (si définie)
-    // Format préféré : icon_evocation_feu (école + élément)
-    // Fallback : icon_evocation, puis icon_feu
-    const rootIcon = getMasterIcon(commonSchool, groupKey);
+    // Icône de l'ÉCOLE racine (au centre) : cherche `icon_<école>_<titre_élément>`
+    // Ex: icon_evocation_chaleur, icon_evocation_froid, icon_evocation_acide...
+    // Le titre correspond au thème général de l'élément (Chaleur pour Feu, Gel pour Froid)
+    const rootIcon = getMasterIcon(commonSchool, card.titre);
     if(rootIcon){
       const fixedRootIcon = fixDriveUrl(rootIcon);
       const iconSize = R_ROOT * 1.2;
