@@ -1052,6 +1052,11 @@ function renderMasteryView(){
       <rect x="-4" y="-4" width="8" height="8" fill="${color}" opacity="0.75"/>
     </g>`;
 
+    // Buffer séparé pour les nœuds cliquables (effets talents)
+    // On les rendra en TOUT DERNIER pour qu'ils soient au-dessus de tous
+    // les décors et donc parfaitement cliquables.
+    let nodesHtml = '';
+
     // Positionner les sous-éléments en cercle autour de l'école
     souselemKeys.forEach((seKey, seIdx) => {
       const seData = hierarchy[seKey];
@@ -1142,7 +1147,7 @@ function renderMasteryView(){
           const ly = effY + labelDist * Math.sin(effAngle);
           const anchor = Math.abs(Math.cos(effAngle)) < 0.3 ? 'middle' : (Math.cos(effAngle) > 0 ? 'start' : 'end');
           const tc = isChosen ? color : '#c4ccd8';
-          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
+          nodesHtml += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
             <circle cx="${effX}" cy="${effY}" r="${R_EFFECT + 5}" fill="transparent" pointer-events="all"/>
             <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''} pointer-events="all"/>
             ${iconMarkup}
@@ -1217,7 +1222,7 @@ function renderMasteryView(){
           const ly = effY + labelDist * Math.sin(effAngle);
           const anchor = Math.abs(Math.cos(effAngle)) < 0.3 ? 'middle' : (Math.cos(effAngle) > 0 ? 'start' : 'end');
           const tc = isChosen ? color : '#c4ccd8';
-          html += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
+          nodesHtml += `<g class="mst-node-svg" data-eid="${ef.id}" data-ckey="${ckey}" style="cursor:pointer">
             <circle cx="${effX}" cy="${effY}" r="${R_EFFECT + 5}" fill="transparent" pointer-events="all"/>
             <circle cx="${effX}" cy="${effY}" r="${R_EFFECT}" fill="${fc}" stroke="${sc}" stroke-width="${isChosen?2.5:1.5}" ${isChosen?`filter="url(#${filtId})"`:''} pointer-events="all"/>
             ${iconMarkup}
@@ -1291,6 +1296,10 @@ function renderMasteryView(){
     // Label école : au-DESSUS du cœur (comme "FEU / Manifestation" dans le concept)
     html += `<text x="${CX}" y="${CY - R_ROOT - 30}" text-anchor="middle" fill="${color}" font-family="Cinzel,serif" font-size="18" font-weight="bold" letter-spacing="3">${rootLabel.toUpperCase()}</text>
       <text x="${CX}" y="${CY - R_ROOT - 12}" text-anchor="middle" fill="${color}88" font-family="Inter,sans-serif" font-size="10" letter-spacing="1">${tierNoms[_masteryActiveTier] || `T${_masteryActiveTier}`}</text>`;
+
+    // Rendre les nœuds cliquables EN DERNIER : ainsi ils sont au-dessus
+    // de tous les décors et parfaitement cliquables.
+    html += nodesHtml;
 
     html += `</svg></div>`;
   }
