@@ -1367,7 +1367,9 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
   const iconEl = document.getElementById('panel-icon');
   const ic = effect.icone || '❓';
   const fixedIc = fixDriveUrl(ic);
-  if(iconIsImage(fixedIc)){
+  // isImageRef() = version globale ; iconIsImage() est locale à renderMasteryView
+  // et n'est PAS visible ici (ReferenceError → le panneau ne s'ouvrait jamais).
+  if(isImageRef(fixedIc)){
     iconEl.innerHTML = `<img src="${fixedIc.replace(/"/g,'&quot;')}" alt="">`;
   } else {
     iconEl.innerHTML = fixedIc;
