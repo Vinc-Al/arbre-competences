@@ -622,7 +622,7 @@ let MASTER_ICONS = {};
      1.05   → sphère légèrement rognée par le bord du cercle
      0.92   → sphère un peu en retrait du bord
    --------------------------------------------------------- */
-const ICON_ZOOM = 1;
+const ICON_ZOOM = 1.1;
 
 let selectedElements = new Set();
 let masteryChoices = {};
