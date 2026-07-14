@@ -1294,8 +1294,17 @@ function renderMasteryView(){
       const fixedRootIcon = fixDriveUrl(rootIcon);
       const iconSize = R_ROOT * 1.2;
       if(iconIsImage(fixedRootIcon)){
-        html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${R_ROOT - 3}"/></clipPath>
-          <image href="${fixedRootIcon.replace(/"/g,'&quot;')}" x="${CX - R_ROOT + 3}" y="${CY - R_ROOT + 3}" width="${R_ROOT*2 - 6}" height="${R_ROOT*2 - 6}" preserveAspectRatio="xMidYMid slice" clip-path="url(#root-clip-${filtId})"/>`;
+        // L'image doit REMPLIR tout le disque de l'école, quel que soit l'élément
+        // et quel que soit le format de l'image (carrée, portrait, paysage).
+        //   - clip au rayon intérieur du contour (stroke-width 2 → R_ROOT - 1)
+        //   - image dessinée volontairement plus grande que le clip (overscan) :
+        //     "slice" recadre le débord, ce qui garantit zéro liseré du gradient
+        //     de fond, même en cas d'arrondi sub-pixel ou d'image non carrée.
+        const rClip = R_ROOT - 1;
+        const OVERSCAN = 2;
+        const imgR = rClip + OVERSCAN;
+        html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${rClip}"/></clipPath>
+          <image href="${fixedRootIcon.replace(/"/g,'&quot;')}" x="${CX - imgR}" y="${CY - imgR}" width="${imgR*2}" height="${imgR*2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#root-clip-${filtId})"/>`;
       } else {
         html += `<text x="${CX}" y="${CY + 10}" text-anchor="middle" font-size="${iconSize}">${fixedRootIcon}</text>`;
       }
