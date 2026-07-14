@@ -1294,17 +1294,17 @@ function renderMasteryView(){
       const fixedRootIcon = fixDriveUrl(rootIcon);
       const iconSize = R_ROOT * 1.2;
       if(iconIsImage(fixedRootIcon)){
-        // L'image doit REMPLIR tout le disque de l'école, quel que soit l'élément
-        // et quel que soit le format de l'image (carrée, portrait, paysage).
-        //   - clip au rayon intérieur du contour (stroke-width 2 → R_ROOT - 1)
-        //   - image dessinée volontairement plus grande que le clip (overscan) :
-        //     "slice" recadre le débord, ce qui garantit zéro liseré du gradient
-        //     de fond, même en cas d'arrondi sub-pixel ou d'image non carrée.
+        // Le disque de l'école doit contenir la sphère ENTIÈREMENT, quel que soit
+        // l'élément. Problème : chaque PNG a ses propres marges transparentes, donc
+        // aucun zoom fixe ne marche pour tous. On pose donc une géométrie de repli
+        // (sphère inscrite dans le cercle, marges comprises = jamais de débord),
+        // puis fitCircularIcons() mesure la sphère réelle et corrige le zoom.
         const rClip = R_ROOT - 1;
-        const OVERSCAN = 2;
-        const imgR = rClip + OVERSCAN;
         html += `<clipPath id="root-clip-${filtId}"><circle cx="${CX}" cy="${CY}" r="${rClip}"/></clipPath>
-          <image href="${fixedRootIcon.replace(/"/g,'&quot;')}" x="${CX - imgR}" y="${CY - imgR}" width="${imgR*2}" height="${imgR*2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#root-clip-${filtId})"/>`;
+          <image class="fit-circle-img" href="${fixedRootIcon.replace(/"/g,'&quot;')}"
+            x="${CX - rClip}" y="${CY - rClip}" width="${rClip*2}" height="${rClip*2}"
+            preserveAspectRatio="xMidYMid meet" clip-path="url(#root-clip-${filtId})"
+            data-cx="${CX}" data-cy="${CY}" data-r="${rClip}" data-zoom="${ICON_ZOOM}"/>`;
       } else {
         html += `<text x="${CX}" y="${CY + 10}" text-anchor="middle" font-size="${iconSize}">${fixedRootIcon}</text>`;
       }
@@ -1326,6 +1326,9 @@ function renderMasteryView(){
   }
 
   container.innerHTML = html;
+
+  // Recale les icônes circulaires (sphère inscrite pile dans son cercle)
+  fitCircularIcons(container);
 
   container.querySelectorAll('.mst-tier-nav-item').forEach(el=>{
     el.addEventListener('click', ()=>{ _masteryActiveTier=parseInt(el.getAttribute('data-tier')); renderMasteryView(); });
@@ -1352,6 +1355,124 @@ function renderMasteryView(){
       }
       if(effect) openElementalEffectPanel(effect, gInfo, ckey);
     });
+  });
+}
+
+
+/* =========================================================
+   AJUSTEMENT AUTOMATIQUE DES ICÔNES CIRCULAIRES
+   =========================================================
+   Chaque PNG d'élément a ses propres marges transparentes autour
+   de la sphère. Un zoom fixe ne peut donc pas convenir à tous :
+   trop petit, la sphère flotte ; trop grand, elle déborde.
+
+   On mesure donc la sphère elle-même : on dessine l'image dans un
+   canvas et on cherche la bounding-box des pixels NON transparents.
+   On calcule ensuite l'échelle pour que cette bounding-box soit
+   exactement inscrite dans le cercle, puis on recentre.
+
+   ICON_ZOOM (config.js) reste un multiplicateur manuel par-dessus :
+     1     → sphère inscrite pile dans le cercle (défaut)
+     1.05  → légèrement rognée (déborde de 5%)
+     0.9   → sphère un peu plus petite que le cercle
+   ========================================================= */
+const _bboxCache = new Map();
+
+// Renvoie {w,h,bx,by,bw,bh} en pixels image, ou null si la mesure échoue
+// (image protégée par CORS, format non lisible…) → on garde le repli.
+function measureOpaqueBBox(url){
+  if(_bboxCache.has(url)) return _bboxCache.get(url);
+
+  const p = new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';   // requis pour lire les pixels d'une image distante
+    img.onerror = () => resolve(null);
+    img.onload = () => {
+      try{
+        // On mesure sur une version réduite : 128px suffisent et c'est instantané
+        const MAX = 128;
+        const scale = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        const w = Math.max(1, Math.round(img.naturalWidth  * scale));
+        const h = Math.max(1, Math.round(img.naturalHeight * scale));
+
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;   // lève une SecurityError si CORS refusé
+
+        const ALPHA_MIN = 12;   // ignore l'antialiasing quasi transparent des bords
+        let minX = w, minY = h, maxX = -1, maxY = -1;
+        for(let y = 0; y < h; y++){
+          for(let x = 0; x < w; x++){
+            if(data[(y * w + x) * 4 + 3] > ALPHA_MIN){
+              if(x < minX) minX = x;
+              if(x > maxX) maxX = x;
+              if(y < minY) minY = y;
+              if(y > maxY) maxY = y;
+            }
+          }
+        }
+        if(maxX < 0) return resolve(null);   // image entièrement transparente
+
+        // Ramené aux proportions de l'image d'origine (échelle 1 = image réduite)
+        resolve({ w, h, bx: minX, by: minY, bw: maxX - minX + 1, bh: maxY - minY + 1 });
+      } catch(err){
+        console.warn('Mesure d\'icône impossible (CORS ?) :', url, err.message);
+        resolve(null);
+      }
+    };
+    img.src = url;
+  });
+
+  _bboxCache.set(url, p);
+  return p;
+}
+
+// Calcule la géométrie <image> pour inscrire la bbox opaque dans le cercle.
+// Fonction pure → testable sans navigateur.
+function computeIconFit(m, cx, cy, r, zoom){
+  const sphere = Math.max(m.bw, m.bh);          // côté de la sphère, en px image
+  const opaqueRatio = (m.bw * m.bh) / (m.w * m.h);
+
+  // Image sans transparence (JPEG, PNG plein) : pas de marge à rogner, on
+  // recouvre le disque comme avant plutôt que de laisser des bandes vides.
+  if(opaqueRatio > 0.98){
+    const R = r * (zoom || 1);
+    return { x: cx - R, y: cy - R, width: R * 2, height: R * 2, par: 'xMidYMid slice' };
+  }
+
+  const s = ((2 * r) / sphere) * (zoom || 1);   // échelle : sphère → diamètre du cercle
+  const cxImg = m.bx + m.bw / 2;                // centre de la sphère dans l'image
+  const cyImg = m.by + m.bh / 2;
+  return {
+    x: cx - cxImg * s,
+    y: cy - cyImg * s,
+    width:  m.w * s,
+    height: m.h * s,
+    par: 'xMidYMid meet',
+  };
+}
+
+// Passe de recalage : appelée après chaque rendu de la vue Maîtrise
+function fitCircularIcons(container){
+  container.querySelectorAll('image.fit-circle-img').forEach(async img => {
+    const url = img.getAttribute('href');
+    if(!url) return;
+    const m = await measureOpaqueBBox(url);
+    if(!m) return;   // mesure impossible → la géométrie de repli reste en place
+
+    const cx = parseFloat(img.dataset.cx);
+    const cy = parseFloat(img.dataset.cy);
+    const r  = parseFloat(img.dataset.r);
+    const zoom = parseFloat(img.dataset.zoom) || 1;
+
+    const fit = computeIconFit(m, cx, cy, r, zoom);
+    img.setAttribute('x', fit.x);
+    img.setAttribute('y', fit.y);
+    img.setAttribute('width',  fit.width);
+    img.setAttribute('height', fit.height);
+    img.setAttribute('preserveAspectRatio', fit.par);
   });
 }
 

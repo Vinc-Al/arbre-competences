@@ -611,6 +611,19 @@ let mjPassword = '';  // chargé depuis le Sheet Master
 // Valeur : emoji, URL image, ou lien Google Drive (converti automatiquement)
 let MASTER_ICONS = {};
 
+/* ---------------------------------------------------------
+   ZOOM DES ICÔNES CIRCULAIRES (cœur d'école, sous-éléments)
+   ---------------------------------------------------------
+   Le code mesure automatiquement la sphère de chaque PNG (en
+   ignorant ses marges transparentes) et l'inscrit pile dans son
+   cercle. ICON_ZOOM est un réglage fin appliqué PAR-DESSUS :
+
+     1      → sphère inscrite exactement dans le cercle (défaut)
+     1.05   → sphère légèrement rognée par le bord du cercle
+     0.92   → sphère un peu en retrait du bord
+   --------------------------------------------------------- */
+const ICON_ZOOM = 1;
+
 let selectedElements = new Set();
 let masteryChoices = {};
 let masteryViewOpen = false;
