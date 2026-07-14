@@ -289,12 +289,20 @@ function parseElementsCSV(rows){
     }
 
     const effect = {
+      // On repart de la ligne CSV complète : toute colonne ajoutée plus tard
+      // dans l'onglet Elements (degats, portee, duree, texte_special, lien_slide...)
+      // remontera automatiquement jusqu'au panneau latéral, sans toucher au code.
+      ...r,
       id: r.effet_id.trim(),
       nom: (r.effet_nom || r.effet_id || '').trim(),
       branches: (r.branches || '*').trim(),
       description: (r.description || '').trim(),
       icone: (r.icone || '').trim(),
       groupe: (r.groupe || '').trim(),  // groupe pour les cercles multiples par tier
+      tier,
+      tier_nom: tierNomFromCol,                       // "Étincelle", "Brasier"...
+      cout: parseInt(r.cout, 10) || 0,                // colonne cout_points (aliasée en "cout")
+      accessible: (r._accessible || '').trim(),       // colonne accessible : OUI / NON
     };
 
     if(inCombos && currentComboKey){
@@ -1346,7 +1354,7 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
   const { theme, card } = group;
   const color = theme.color;
   const tierNoms = card.tiers_noms || [];
-  const tierNom = tierNoms[_masteryActiveTier] || `Tier ${_masteryActiveTier}`;
+  const tierNom = effect.tier_nom || tierNoms[_masteryActiveTier] || `Tier ${_masteryActiveTier}`;
   const isChosen = masteryChoices[ckey] === effect.id;
 
   // Header du panneau
@@ -1383,10 +1391,23 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
     tags.push(`<span class="mst-effect-branche">🔗 ${blabel}</span>`);
   }
 
+  // Exactement la même fiche que dans l'arbre d'Évocation, alimentée par le CSV Elements
+  const { descHtml, statsHtml, specialHtml } = buildFicheBody(effect);
+
+  // Ligne de coût : la colonne cout_points du Sheet (0 = effet de base offert)
+  const coutHtml = `<div class="rank-stats">
+      <div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">Coût :</span> ${effect.cout} point${effect.cout === 1 ? '' : 's'}</div>
+      ${effect.accessible && effect.accessible.toUpperCase() !== 'OUI'
+        ? `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">Accessible :</span> non</div>` : ''}
+    </div>`;
+
   const body = document.getElementById('panel-body');
   body.innerHTML = `
     ${tags.length ? `<div class="panel-tags">${tags.join('')}</div>` : ''}
-    <p class="rank-description">${parseRichText(effect.description) || 'Aucune description fournie.'}</p>
+    ${descHtml}
+    ${statsHtml}
+    ${coutHtml}
+    ${specialHtml}
   `;
 
   // Footer : indicateur de statut en lecture seule (le choix se fait dans le Sheet joueur)
@@ -1405,8 +1426,9 @@ function openElementalEffectPanel(effect, groupInfo, ckey){
     `;
   }
 
-  // Ouvrir le panneau
+  // Ouvrir le panneau + l'overlay (comme dans Évocation : clic en dehors = fermeture)
   document.getElementById('panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
 }
 
 // Helper pour l'étiquette de branche d'un effet (utilisé par openElementalEffectPanel)
@@ -1946,6 +1968,100 @@ function buildElementalEffectsSection(skill){
   return html;
 }
 
+/* =========================================================
+   FICHE COMMUNE — sorts d'école ET effets élémentaires
+   =========================================================
+   Les deux onglets du Sheet n'ont pas les mêmes colonnes :
+
+     Evocation : degats, portee, duree, action, description,
+                 texte_special, texte_special1..10
+     Elements  : tier, cout_points, groupe, description
+
+   Dans l'onglet Elements, tout l'effet tient dans "description",
+   où les lignes commençant par "→" jouent le rôle des stat-lines
+   d'Évocation. buildFicheBody() lit donc les DEUX conventions et
+   ignore silencieusement les colonnes absentes : ajouter demain
+   une colonne "portee" à l'onglet Elements suffira à la voir
+   s'afficher, sans une ligne de code en plus.
+   ========================================================= */
+
+// Colonnes reconnues comme "statistiques" (affichées "→ Label : valeur")
+const STAT_DEFS = [
+  { key: 'degats', label: 'Dégâts génériques' },
+  { key: 'portee', label: 'Portée' },
+  { key: 'duree',  label: 'Durée' },
+  { key: 'action', label: 'Ressource d\'Action' },
+];
+
+// Découpe une description multi-lignes en segments, dans l'ordre du Sheet :
+//   - lignes "→ ..."        → puces fléchées (style stat-line)
+//   - lignes normales       → paragraphes
+function buildDescriptionHtml(raw){
+  const lines = String(raw || '').split('\n');
+  const out = [];
+  let para = [], arrows = [];
+
+  const flushPara = () => {
+    if(!para.length) return;
+    out.push(`<p class="rank-description">${parseRichText(para.join('\n'))}</p>`);
+    para = [];
+  };
+  const flushArrows = () => {
+    if(!arrows.length) return;
+    out.push(`<div class="rank-stats">${arrows.map(a =>
+      `<div class="rank-stat-line"><span class="arrow">→</span>${parseRichText(a)}</div>`
+    ).join('')}</div>`);
+    arrows = [];
+  };
+
+  lines.forEach(line => {
+    const t = line.trim();
+    // "→ ..." ou "**→ ...**" : puce fléchée (la flèche est rendue par le <span>)
+    if(/^(\*\*)?→/.test(t)){
+      flushPara();
+      arrows.push(t.replace(/^(\*\*)?→\s*/, '$1'));
+    } else if(!t){
+      // ligne vide : ferme le bloc courant
+      flushPara(); flushArrows();
+    } else {
+      flushArrows();
+      para.push(line);
+    }
+  });
+  flushPara(); flushArrows();
+
+  return out.length ? out.join('') : '<p class="rank-description">Aucune description fournie.</p>';
+}
+
+// Corps de fiche complet, commun aux deux arbres
+function buildFicheBody(d){
+  const val = k => (d[k] == null ? '' : String(d[k]));
+
+  // 1. Stats issues de colonnes dédiées (Évocation ; vides côté Elements)
+  const statLines = STAT_DEFS
+    .filter(s => val(s.key).trim())
+    .map(s => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${parseRichText(val(s.key))}</div>`)
+    .join('');
+
+  // 2. Description (paragraphes + puces "→" du Sheet)
+  const descHtml = buildDescriptionHtml(d.description);
+
+  // 3. Encadrés spéciaux : texte_special, texte_special1..10 / texte_special_1..10
+  const specials = [];
+  if(val('texte_special').trim()) specials.push(val('texte_special'));
+  for(let i = 1; i <= 10; i++){
+    const v = (val(`texte_special${i}`) || val(`texte_special_${i}`)).trim();
+    if(v) specials.push(v);
+  }
+  const specialHtml = specials.map(t => `<div class="rank-special">${parseRichText(t)}</div>`).join('');
+
+  return {
+    descHtml,
+    statsHtml: statLines ? `<div class="rank-stats">${statLines}</div>` : '',
+    specialHtml,
+  };
+}
+
 function openPanel(skill){
   document.getElementById('panel-tier').textContent = `${(skill.branche||'').replace(/_/g,' ')} · Coût ${skill.cout} pt${skill.cout===1?'':'s'}`;
   document.getElementById('panel-rank').textContent = `RANK – ${skill.niveau}`;
@@ -1964,36 +2080,14 @@ function openPanel(skill){
 
   const forkLabel = skill.parent_id ? skill.parent_id : null;
 
-  // Stat lines with arrow prefix, only shown if the corresponding column is filled
-  const statDefs = [
-    { key: 'degats', label: 'Dégâts génériques' },
-    { key: 'portee', label: 'Portée' },
-    { key: 'duree', label: 'Durée' },
-    { key: 'action', label: 'Ressource d\'Action' },
-  ];
-  const statLines = statDefs
-    .filter(d => skill[d.key] && skill[d.key].trim().length > 0)
-    .map(d => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${d.label} :</span> ${parseRichText(skill[d.key])}</div>`)
-    .join('');
-
-  // Collecter tous les texte_special (supporte les deux conventions :
-  // texte_special, texte_special1/texte_special_1, texte_special2/texte_special_2, etc.)
-  const specialBlocks = [];
-  if(skill.texte_special && skill.texte_special.trim()) specialBlocks.push(skill.texte_special);
-  for(let i = 1; i <= 10; i++){
-    const val = (skill[`texte_special${i}`] || skill[`texte_special_${i}`] || '').trim();
-    if(val) specialBlocks.push(val);
-  }
-  const specialHtml = specialBlocks
-    .map(txt => `<div class="rank-special">${parseRichText(txt)}</div>`)
-    .join('');
-
+  // Fiche commune (stats, description, encadrés) — cf. buildFicheBody
+  const { descHtml, statsHtml, specialHtml } = buildFicheBody(skill);
   const elementalSection = buildElementalEffectsSection(skill);
 
   const body = document.getElementById('panel-body');
   body.innerHTML = `
-    <p class="rank-description">${parseRichText(skill.description) || 'Aucune description fournie.'}</p>
-    ${statLines ? `<div class="rank-stats">${statLines}</div>` : ''}
+    ${descHtml}
+    ${statsHtml}
     ${specialHtml}
     ${elementalSection}
     ${forkLabel ? `<div class="stat-row"><span class="label">S'embranche depuis</span><span>${forkLabel}</span></div>` : ''}
