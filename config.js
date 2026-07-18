@@ -224,7 +224,9 @@ const DATA_SHEETS = {
   ecoles: {
     necromancie: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1918427361&single=true&output=csv",
     // ↓ Remplace gid=XXXX par le gid de l'onglet Invocation, puis dé-commente :
-    invocation: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=514887193&single=true&output=csv",
+    // invocation: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=XXXX&single=true&output=csv",
+    // transmutation: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=XXXX&single=true&output=csv",
+    // destruction: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
   },
 };
 
@@ -247,7 +249,7 @@ const PLAYER_SAVE_SHEETS = {
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoI0fTradSvM-MD109rCxSFki_Vzsoe0lbmBi897g6JuejZ7nTY6t7G4WSWmffNOhW/exec";
 
 const SCHOOL_THEMES = {
-  evocation:    { label: "Destruction",    color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
+  evocation:    { label: "Évocation",    color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
   abjuration:   { label: "Abjuration",   color: "#6fa8ff", glow: "rgba(111,168,255,0.4)" },
   invocation:   { label: "Invocation",   color: "#4fd17e", glow: "rgba(79,209,126,0.4)" },
   transmutation:{ label: "Transmutation",color: "#d4af6a", glow: "rgba(212,175,106,0.4)" },
