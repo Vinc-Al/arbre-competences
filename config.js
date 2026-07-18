@@ -223,6 +223,8 @@ const DATA_SHEETS = {
   // sont des clés globales (parent_id + sauvegardes joueur).
   ecoles: {
     necromancie: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1918427361&single=true&output=csv",
+    // ↓ Remplace gid=XXXX par le gid de l'onglet Invocation, puis dé-commente :
+    // invocation: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=XXXX&single=true&output=csv",
     // destruction: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
   },
 };
