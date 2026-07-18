@@ -360,13 +360,38 @@ async function loadData(){
   let skillsLoaded = false;
   let elementsLoaded = false;
 
-  // ─── 1. COMPÉTENCES depuis DATA_SHEETS (toujours la source de référence) ───
+  // ─── 1. COMPÉTENCES ────────────────────────────────────────────────────────
+  // Deux sources cumulables :
+  //   a) DATA_SHEETS.competences  : onglet historique multi-écoles (colonne `ecole`)
+  //   b) DATA_SHEETS.ecoles       : { necromancie: url, destruction: url, ... }
+  //      → un onglet dédié par école. La colonne `ecole` y est FACULTATIVE :
+  //        on l'injecte depuis la clé de l'onglet si la ligne ne la précise pas.
+  // Les deux sources sont concaténées, ce qui permet une migration progressive
+  // d'un onglet unique vers un onglet par école sans rien casser.
+  let loadedSkills = [];
+
   if(DATA_SHEETS.competences){
     try{
       const rows = await fetchCSV(DATA_SHEETS.competences);
-      if(rows.length){ allSkills = rows; skillsLoaded = true; }
+      if(rows.length){ loadedSkills = loadedSkills.concat(rows); skillsLoaded = true; }
     } catch(err){ console.warn('Compétences DATA inaccessibles :', err); }
   }
+
+  if(DATA_SHEETS.ecoles){
+    for(const [ecoleKey, url] of Object.entries(DATA_SHEETS.ecoles)){
+      if(!url) continue;   // onglet déclaré mais pas encore rempli → ignoré proprement
+      try{
+        const rows = await fetchCSV(url);
+        // Un onglet par école = une seule école par définition : on impose donc
+        // `ecole` depuis la clé de l'onglet (le parseur met "default" si la
+        // colonne manque, d'où l'affectation inconditionnelle ici).
+        rows.forEach(r => { r.ecole = ecoleKey; });
+        if(rows.length){ loadedSkills = loadedSkills.concat(rows); skillsLoaded = true; }
+      } catch(err){ console.warn(`École « ${ecoleKey} » inaccessible :`, err); }
+    }
+  }
+
+  if(skillsLoaded){ allSkills = loadedSkills; }
   if(!skillsLoaded){
     allSkills = DEMO_DATA;
     statusEl.textContent = 'Mode démonstration — Sheet DATA non configuré';
@@ -1664,13 +1689,27 @@ function buildBrancheGraph(skills){
   const idToBranche = {};
   skills.forEach(s => { idToBranche[s.id] = s.branche || s.id; });
 
+  // parent_id peut lister PLUSIEURS parents séparés par une virgule
+  // (ex. "necro_soin_groupe_5,necro_projection_soin_5" pour un capstone
+  //  convergent). Le 1er parent valide définit le fork de branche ;
+  //  les suivants deviennent des liens croisés supplémentaires (extraParentLinks).
+  const parseParents = pid => String(pid || '').split(',').map(x => x.trim()).filter(Boolean);
+  const extraParentLinks = []; // [{ childId, parentId }]
+
   Object.keys(byBranche).forEach(key => {
     const first = byBranche[key][0];
-    if(first && first.parent_id && idToBranche[first.parent_id] && idToBranche[first.parent_id] !== key){
-      brancheParent[key] = { parentBranche: idToBranche[first.parent_id], parentSkillId: first.parent_id };
+    const parents = first ? parseParents(first.parent_id) : [];
+    // 1er parent appartenant à une AUTRE branche → c'est le fork de branche
+    const forkParent = parents.find(p => idToBranche[p] && idToBranche[p] !== key);
+    if(forkParent){
+      brancheParent[key] = { parentBranche: idToBranche[forkParent], parentSkillId: forkParent };
     } else {
       brancheParent[key] = null; // root branche
     }
+    // parents restants (au-delà du fork) → liens supplémentaires vers le 1er nœud
+    parents.filter(p => p !== forkParent && idToBranche[p]).forEach(p => {
+      extraParentLinks.push({ childId: first.id, parentId: p });
+    });
   });
 
   // children map: parentBrancheKey -> [childBrancheKey, ...] in first-seen order
@@ -1686,7 +1725,7 @@ function buildBrancheGraph(skills){
     }
   });
 
-  return { byBranche, brancheParent, childrenOf, rootBranches };
+  return { byBranche, brancheParent, childrenOf, rootBranches, extraParentLinks };
 }
 
 function buildLayout(skills){
@@ -1759,7 +1798,7 @@ function renderTree(){
     return;
   }
   const positions = buildLayout(skills);
-  const { byBranche, brancheParent, rootBranches } = buildBrancheGraph(skills);
+  const { byBranche, brancheParent, rootBranches, extraParentLinks } = buildBrancheGraph(skills);
   const canvas = document.getElementById('tree-canvas');
 
   canvas.innerHTML = '<svg id="links"></svg>';
@@ -1842,7 +1881,15 @@ function renderTree(){
     if(from && to) drawLink(from, to, true);
   });
 
-  // Root school node + connectors down to each root branch's first (tier-0) node
+  // Liens de parents SUPPLÉMENTAIRES : cas d'un nœud convergent dont le
+  // parent_id liste plusieurs parents (ex. un capstone atteignable depuis
+  // deux branches). Le 1er parent a déjà tracé le fork ci-dessus ; on ajoute
+  // ici les liens vers les parents restants, dans le même style pointillé.
+  extraParentLinks.forEach(({ childId, parentId }) => {
+    const from = positions[parentId];
+    const to = positions[childId];
+    if(from && to) drawLink(from, to, true);
+  });
   const rootDiv = document.createElement('div');
   rootDiv.className = 'node root school-root';
   rootDiv.style.left = rootX + 'px';
@@ -2123,6 +2170,7 @@ const STAT_DEFS = [
   { key: 'portee', label: 'Portée' },
   { key: 'duree',  label: 'Durée' },
   { key: 'action', label: 'Ressource d\'Action' },
+  { key: 'invocation', label: 'Invocation' },
 ];
 
 // Découpe une description multi-lignes en segments, dans l'ordre du Sheet :

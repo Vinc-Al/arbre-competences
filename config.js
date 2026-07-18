@@ -215,6 +215,16 @@ const DATA_SHEETS = {
   elements:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv", // URL CSV de l'onglet "elements" du Sheet DATA
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
   master:      "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=0&single=true&output=csv", // URL CSV de l'onglet "Master" — ligne id=mj_password, valeur=votre_mot_de_passe
+
+  // ── UN ONGLET PAR ÉCOLE ────────────────────────────────────────────────────
+  // Clé = nom d'école (doit matcher SCHOOLS_META et la colonne `ecole`).
+  // La colonne `ecole` du CSV est facultative : injectée depuis la clé ici.
+  // Les ids doivent rester préfixés par l'école (necro_..., destr_...) car ce
+  // sont des clés globales (parent_id + sauvegardes joueur).
+  ecoles: {
+    necromancie: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1918427361&single=true&output=csv",
+    // destruction: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+  },
 };
 
 const PLAYER_SHEETS = {
@@ -622,7 +632,7 @@ let MASTER_ICONS = {};
      1.05   → sphère légèrement rognée par le bord du cercle
      0.92   → sphère un peu en retrait du bord
    --------------------------------------------------------- */
-const ICON_ZOOM = 1.1;
+const ICON_ZOOM = 1;
 
 let selectedElements = new Set();
 let masteryChoices = {};
