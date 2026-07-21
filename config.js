@@ -230,7 +230,26 @@ const DATA_SHEETS = {
 	divination: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1897246214&single=true&output=csv",
 	enchantement: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1649994559&single=true&output=csv",
   },
+
+  // ── ONGLETS MARTIAUX (page martial.html) ──────────────────────────────────
+  // Même format que `ecoles` : une catégorie martiale = un onglet du Sheet.
+  // Chargés à la place des écoles quand la page pose window.APP_MODE='martial'.
+  martial: {
+    armes:     "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1642177744&single=true&output=csv",
+    // armures:   "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+    // boucliers: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+    // tactiques: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+  },
 };
+
+// ── BASCULE DE PAGE : magie (défaut) vs martial ───────────────────────────────
+// martial.html pose window.APP_MODE='martial' AVANT de charger ce fichier.
+// En mode martial on ne charge QUE les onglets martiaux (pas les écoles de magie).
+const APP_MODE = (typeof window !== 'undefined' && window.APP_MODE) || 'magic';
+if(APP_MODE === 'martial'){
+  DATA_SHEETS.competences = '';          // pas de sorts de magie sur la page martiale
+  DATA_SHEETS.ecoles = DATA_SHEETS.martial;
+}
 
 const PLAYER_SHEETS = {
 	"Cryzhou": "https://docs.google.com/spreadsheets/d/e/2PACX-1vQybr2T9tD7G9CamxTe3-t9JQPyZ3IijFjOgAsCITFCwXN7u6JWjidqisyRL-Da7_mmu7Yzu7RNMeJn/pub?gid=0&single=true&output=csv",
@@ -259,6 +278,11 @@ const SCHOOL_THEMES = {
   illusion:     { label: "Illusion",     color: "#a98ce0", glow: "rgba(169,140,224,0.4)" },
   enchantement: { label: "Enchantement", color: "#e08ac0", glow: "rgba(224,138,192,0.4)" },
   necromancie:  { label: "Nécromancie",  color: "#8a7ea8", glow: "rgba(138,126,168,0.4)" },
+  // ── Catégories MARTIALES (page martial.html) ──────────────────────────────
+  armes:        { label: "Armes",        color: "#c0562f", glow: "rgba(192,86,47,0.4)" },
+  armures:      { label: "Armures",      color: "#8a8f98", glow: "rgba(138,143,152,0.4)" },
+  boucliers:    { label: "Boucliers",    color: "#c9a24b", glow: "rgba(201,162,75,0.4)" },
+  tactiques:    { label: "Tactiques",    color: "#5f9e6e", glow: "rgba(95,158,110,0.4)" },
   default:      { label: "École",        color: "#d4af6a", glow: "rgba(212,175,106,0.4)" }
 };
 
@@ -599,6 +623,7 @@ const NODE_SIZE      = 52;
 const COL_GAP        = 160;  // horizontal distance between branches (plus large pour éviter les chevauchements)
 const ROW_GAP        = 105;  // vertical distance between tiers
 const TOP_PADDING    = 100;
+const T0_GAP         = 70;   // espace SUPPLÉMENTAIRE au-dessus du tier 0 : décale t0 (et donc tous les tiers) vers le bas, sans bouger le nœud racine de l'école
 const LEFT_PADDING   = 80;
 const ROOT_X_OFFSET  = 0;
 

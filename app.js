@@ -1781,7 +1781,7 @@ function buildLayout(skills){
       const tier = tierFromId(s.id) + offset;
       positions[s.id] = {
         x: LEFT_PADDING + col * COL_GAP,
-        y: TOP_PADDING  + tier * ROW_GAP,
+        y: TOP_PADDING + T0_GAP + tier * ROW_GAP,
         brancheKey, col, tier,
       };
     });

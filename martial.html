@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arbre de compétences — Voie martiale</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div id="app">
+  <div id="bg-glow"></div>
+  <div id="bg-grid"></div>
+
+  <header>
+    <div class="title-block">
+      <h1 id="header-title">Voie martiale</h1>
+      <div class="subtitle">Données chargées depuis Google Sheets (CSV) — par joueur et par catégorie martiale</div>
+    </div>
+    <div class="right-block">
+      <div class="player-chip">
+        Joueur : <strong id="player-name">—</strong>
+        <span id="player-class-badge"></span>
+        <span id="mode-badge" class="mode-badge">Joueur</span>
+      </div>
+      <div class="points-block">
+        <div class="points-bar-wrap"><div class="points-bar-fill" id="points-bar-fill"></div></div>
+        <div class="points" id="points-display">— points disponibles</div>
+      </div>
+      <button id="mj-login-btn" class="mj-login-btn" title="Accès Maître du Jeu">🔐 MJ</button>
+    </div>
+  </header>
+
+  <div id="school-tabs"></div>
+
+  <div id="element-bar" style="display:none">
+    <div id="element-select-wrap">
+      <button id="element-select-btn">
+        <span id="element-select-label">Éléments : aucun</span>
+        <span class="caret">▾</span>
+      </button>
+      <div id="element-dropdown"></div>
+    </div>
+    <button id="mastery-toggle-btn">Maîtrise élémentaire</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <div id="tree-canvas">
+      <svg id="links"></svg>
+    </div>
+  </div>
+
+  <div id="mastery-view"></div>
+
+  <div id="source-status">Chargement des données…</div>
+
+  <div id="zoom-controls">
+    <button id="zoom-out" title="Zoom -">−</button>
+    <button id="zoom-reset" title="Réinitialiser">⤾</button>
+    <button id="zoom-in" title="Zoom +">+</button>
+  </div>
+</div>
+
+<div id="overlay"></div>
+
+<aside id="panel">
+  <button id="panel-close">✕</button>
+  <div class="panel-head">
+    <div class="panel-head-text">
+      <div class="panel-rank" id="panel-rank">RANK – —</div>
+      <div class="panel-tier" id="panel-tier">Palier —</div>
+      <h2 class="panel-title" id="panel-title">—</h2>
+    </div>
+    <div class="panel-icon" id="panel-icon"></div>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+  <div class="panel-footer" id="panel-footer"></div>
+</aside>
+
+<script>window.APP_MODE = "martial";</script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
