@@ -249,6 +249,15 @@ const DATA_SHEETS = {
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPZXHOfabKIHoR809UZ8DJTGPoVSBR7VujEbSpvsZDwx44Sux0QuQa3uyjV6ZWxgVxm5VxOva5N8Cb/pub?gid=256090465&single=true&output=csv",
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPZXHOfabKIHoR809UZ8DJTGPoVSBR7VujEbSpvsZDwx44Sux0QuQa3uyjV6ZWxgVxm5VxOva5N8Cb/pub?gid=1171618905&single=true&output=csv",
   ],
+
+  // ── BIBLIOTHÈQUE / GLOSSAIRE ──────────────────────────────────────────────
+  // Onglet plat : colonnes  terme, definition  (+ facultatif : alias, categorie).
+  // `alias` = variantes séparées par des virgules, ex. "l'Avantage,avantages".
+  // Les termes trouvés dans les descriptions des dons deviennent cliquables.
+  // Accepte une URL seule ou une liste, comme `dons`.
+  bibliotheque: [
+    // "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+  ],
 };
 
 // ── BASCULE DE PAGE : magie (défaut) vs martial ───────────────────────────────

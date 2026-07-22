@@ -60,6 +60,42 @@
   .don-desc em{ color:var(--gold-bright); font-style:italic; }
   .don-desc strong{ color:var(--text-0); font-weight:600; }
   .don-desc u{ text-decoration-color:var(--gold); }
+  /* ── Bibliothèque : termes cliquables + panneau de définition ───────────── */
+  .glossary-link{
+    color:var(--arcane); text-decoration:none;
+    border-bottom:1px dashed rgba(111,168,255,0.5);
+    cursor:pointer; transition:color .15s, border-color .15s;
+  }
+  .glossary-link:hover{ color:var(--arcane-glow); border-bottom-color:var(--arcane-glow); }
+  #glossary-overlay{
+    position:fixed; inset:0; background:rgba(5,8,12,0.6);
+    opacity:0; pointer-events:none; transition:opacity .2s; z-index:40;
+  }
+  #glossary-overlay.open{ opacity:1; pointer-events:auto; }
+  #glossary-panel{
+    position:fixed; top:0; right:0; height:100%; width:min(420px, 92vw);
+    background:var(--panel-bg); border-left:1px solid var(--line-dim);
+    box-shadow:-18px 0 50px rgba(0,0,0,0.55);
+    transform:translateX(100%); transition:transform .25s ease;
+    z-index:41; display:flex; flex-direction:column; padding:22px 24px;
+    overflow-y:auto;
+  }
+  #glossary-panel.open{ transform:translateX(0); }
+  #glossary-close{
+    position:absolute; top:14px; right:16px;
+    background:none; border:none; color:var(--text-1);
+    font-size:1.1rem; cursor:pointer; padding:4px 8px;
+  }
+  #glossary-close:hover{ color:var(--text-0); }
+  #glossary-kicker{
+    font-family:'Inter',sans-serif; font-size:0.64rem; letter-spacing:0.14em;
+    text-transform:uppercase; color:var(--text-1); margin-bottom:6px;
+  }
+  #glossary-terme{
+    font-family:'Cinzel','Spectral',Georgia,serif; font-size:1.3rem;
+    color:var(--arcane-glow); margin:0 0 14px;
+  }
+  #glossary-def{ color:var(--text-0); line-height:1.6; font-size:0.96rem; }
   #dons-status{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
   .dons-empty{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
 </style>
@@ -92,6 +128,14 @@
   </div>
 </div>
 
+<div id="glossary-overlay"></div>
+<aside id="glossary-panel">
+  <button id="glossary-close" title="Fermer">✕</button>
+  <div id="glossary-kicker">Bibliothèque</div>
+  <h2 id="glossary-terme">—</h2>
+  <div id="glossary-def"></div>
+</aside>
+
 <script src="config.js"></script>
 <script>
 /* =========================================================
@@ -123,13 +167,25 @@ function parseCSV(text){
     .map(r => { const o = {}; headers.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
 }
 
-// --- mise en forme légère : **gras**, *italique*, __souligné__, retours ligne ---
-function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// --- mise en forme : MÊME SYNTAXE que la page éléments (parseRichText de app.js) ---
+//   [texte](couleur) → mark coloré (color-feu, color-soin, color-special…)
+//   [texte]          → référence stylée (.spell-ref)
+//   [[terme]]        → lien de bibliothèque forcé
+//   **gras**, *italique*, __souligné__, retours à la ligne
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 function richText(raw){
-  let s = esc(raw || '');
+  let s = esc(raw);
+  // [[terme]] : lien de bibliothèque explicite (avant les autres crochets)
+  s = s.replace(/\[\[([^\]]+)\]\]/g, (m, t) => `<a class="glossary-link" data-terme="${t.replace(/"/g,'&quot;')}">${t}</a>`);
+  // [texte](couleur) → mark coloré
+  s = s.replace(/\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/g, (m, txt, color) => `<mark class="color-${color}">${txt}</mark>`);
+  // [texte] seul → référence stylée
+  s = s.replace(/\[([^\]]+)\]/g, (m, txt) => `<span class="spell-ref">${txt}</span>`);
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/__([^_]+)__/g, '<u>$1</u>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/\n/g, '<br>');
   return s;
 }
 
@@ -163,6 +219,8 @@ function render(){
       </div>
       <div class="don-desc">${richText(d.description)}</div>
     </div>`).join('');
+
+  linkifyGlossary(list);   // rend cliquables les termes de la bibliothèque
 }
 
 function buildChips(){
@@ -183,6 +241,130 @@ function buildChips(){
   chips.appendChild(mk('*', 'Toutes'));
   cats.forEach(c => chips.appendChild(mk(c, c)));
 }
+
+
+/* =========================================================
+   BIBLIOTHÈQUE : termes cliquables + panneau de définition
+   =========================================================
+   Deux façons de lier un terme dans une description :
+     1. AUTOMATIQUE : tout terme (ou alias) présent dans l'onglet
+        bibliothèque est détecté dans le texte et rendu cliquable.
+        Rien à baliser dans tes CSV existants.
+     2. EXPLICITE  : [[Terme]] force le lien (utile si le mot est
+        écrit différemment, ou pour lier un terme non détecté).
+   ========================================================= */
+let GLOSSARY = {};       // clé normalisée -> { terme, definition }
+let GLOSSARY_RE = null;  // regex de détection, construite une fois
+
+function buildGlossaryRegex(){
+  const keys = [];
+  Object.values(GLOSSARY).forEach(e => {
+    keys.push(e.terme);
+    (e.aliasList || []).forEach(a => keys.push(a));
+  });
+  if(!keys.length){ GLOSSARY_RE = null; return; }
+  // Les plus longs d'abord : "Blocage Magique" doit primer sur "Blocage"
+  keys.sort((a, b) => b.length - a.length);
+  const escRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Bornes de mot compatibles accents (\b ne marche pas avec « é »)
+  GLOSSARY_RE = new RegExp('(?<![\\p{L}\\p{N}])(' + keys.map(escRe).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+}
+
+function glossaryLookup(text){
+  return GLOSSARY[norm(text)] || null;
+}
+
+// Parcourt les nœuds TEXTE d'un conteneur et rend cliquables les termes connus.
+// On travaille sur le DOM (et pas sur la chaîne HTML) pour ne jamais casser
+// une balise ni re-baliser l'intérieur d'un lien déjà posé.
+function linkifyGlossary(root){
+  if(!GLOSSARY_RE) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node){
+      if(!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      // ne pas toucher au contenu d'un lien déjà existant
+      if(node.parentElement && node.parentElement.closest('.glossary-link')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const targets = [];
+  let n; while((n = walker.nextNode())) targets.push(n);
+
+  targets.forEach(node => {
+    const text = node.nodeValue;
+    GLOSSARY_RE.lastIndex = 0;
+    if(!GLOSSARY_RE.test(text)) return;
+    GLOSSARY_RE.lastIndex = 0;
+
+    const frag = document.createDocumentFragment();
+    let last = 0, m;
+    while((m = GLOSSARY_RE.exec(text)) !== null){
+      const entry = glossaryLookup(m[1]);
+      if(!entry) continue;                       // alias inconnu → on laisse tel quel
+      if(m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const a = document.createElement('a');
+      a.className = 'glossary-link';
+      a.dataset.terme = entry.terme;
+      a.textContent = m[1];                      // garde la casse d'origine du texte
+      frag.appendChild(a);
+      last = m.index + m[1].length;
+    }
+    if(!last) return;
+    if(last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  });
+}
+
+function openGlossary(terme){
+  const entry = glossaryLookup(terme);
+  if(!entry) return;
+  document.getElementById('glossary-terme').textContent = entry.terme;
+  const def = document.getElementById('glossary-def');
+  def.innerHTML = richText(entry.definition || 'Aucune définition fournie.');
+  linkifyGlossary(def);                          // définitions liées entre elles
+  document.getElementById('glossary-panel').classList.add('open');
+  document.getElementById('glossary-overlay').classList.add('open');
+}
+
+function closeGlossary(){
+  document.getElementById('glossary-panel').classList.remove('open');
+  document.getElementById('glossary-overlay').classList.remove('open');
+}
+
+async function loadGlossary(){
+  const d = (typeof DATA_SHEETS !== 'undefined') ? DATA_SHEETS.bibliotheque : '';
+  let urls = Array.isArray(d) ? d : (d && typeof d === 'object' ? Object.values(d) : [d]);
+  urls = urls.map(u => (u || '').trim()).filter(Boolean);
+  if(!urls.length) return;                       // pas de bibliothèque configurée → page normale
+
+  const results = await Promise.allSettled(urls.map(async url => {
+    const res = await fetch(url, { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return parseCSV(await res.text());
+  }));
+
+  results.forEach(r => {
+    if(r.status !== 'fulfilled'){ console.warn('Bibliothèque inaccessible :', r.reason && r.reason.message); return; }
+    r.value.forEach(row => {
+      const terme = (row.terme || row.nom || '').trim();
+      if(!terme) return;
+      const aliasList = (row.alias || '').split(',').map(a => a.trim()).filter(Boolean);
+      const entry = { terme, definition: row.definition || row.description || '', aliasList };
+      GLOSSARY[norm(terme)] = entry;
+      aliasList.forEach(a => GLOSSARY[norm(a)] = entry);
+    });
+  });
+  buildGlossaryRegex();
+}
+
+// Délégation : un seul écouteur pour tous les liens (présents et à venir)
+document.addEventListener('click', e => {
+  const link = e.target.closest('.glossary-link');
+  if(link){ e.preventDefault(); openGlossary(link.dataset.terme || link.textContent); }
+});
+document.getElementById('glossary-close').addEventListener('click', closeGlossary);
+document.getElementById('glossary-overlay').addEventListener('click', closeGlossary);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeGlossary(); });
 
 // Normalise DATA_SHEETS.dons (string | array | object) en liste d'URLs
 function donsSources(){
@@ -220,6 +402,7 @@ async function loadDons(){
     status.textContent = failed ? `Aucun don chargé (${failed}/${urls.length} source(s) en échec).` : 'Onglet(s) vide(s).';
     return;
   }
+  await loadGlossary();   // avant le rendu : les termes seront cliquables d'emblée
   buildChips();
   render();
   if(failed) console.warn(`${failed} source(s) de dons sur ${urls.length} n'ont pas pu être chargées.`);
