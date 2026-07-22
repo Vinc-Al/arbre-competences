@@ -256,9 +256,15 @@ const DATA_SHEETS = {
   // Les termes trouvés dans les descriptions des dons deviennent cliquables.
   // Accepte une URL seule ou une liste, comme `dons`.
   bibliotheque: [
-    // "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPZXHOfabKIHoR809UZ8DJTGPoVSBR7VujEbSpvsZDwx44Sux0QuQa3uyjV6ZWxgVxm5VxOva5N8Cb/pub?gid=50757299&single=true&output=csv",
   ],
 };
+
+/* Bibliothèque : détecter AUTOMATIQUEMENT les termes dans les descriptions ?
+     false → seuls les termes que tu balises toi-même avec [[FORCE]] sont cliquables
+             (recommandé : tu gardes le contrôle, pas de lien parasite)
+     true  → tout terme de la bibliothèque devient cliquable partout où il apparaît */
+const GLOSSARY_AUTOLINK = false;
 
 // ── BASCULE DE PAGE : magie (défaut) vs martial ───────────────────────────────
 // martial.html pose window.APP_MODE='martial' AVANT de charger ce fichier.

@@ -60,42 +60,41 @@
   .don-desc em{ color:var(--gold-bright); font-style:italic; }
   .don-desc strong{ color:var(--text-0); font-weight:600; }
   .don-desc u{ text-decoration-color:var(--gold); }
-  /* ── Bibliothèque : termes cliquables + panneau de définition ───────────── */
+  /* ── Bibliothèque : termes cliquables + petite fenêtre de définition ────── */
   .glossary-link{
     color:var(--arcane); text-decoration:none;
     border-bottom:1px dashed rgba(111,168,255,0.5);
-    cursor:pointer; transition:color .15s, border-color .15s;
+    cursor:help; transition:color .15s, border-color .15s;
   }
   .glossary-link:hover{ color:var(--arcane-glow); border-bottom-color:var(--arcane-glow); }
-  #glossary-overlay{
-    position:fixed; inset:0; background:rgba(5,8,12,0.6);
-    opacity:0; pointer-events:none; transition:opacity .2s; z-index:40;
+
+  /* Popover : petite fenêtre ancrée au terme cliqué */
+  #glossary-pop{
+    position:absolute; z-index:60;
+    width:min(340px, 88vw);
+    background:var(--panel-bg);
+    border:1px solid rgba(111,168,255,0.35);
+    border-radius:10px;
+    box-shadow:0 12px 34px rgba(0,0,0,0.6);
+    padding:12px 14px 14px;
+    display:none;
+    animation:glossFade .13s ease-out;
   }
-  #glossary-overlay.open{ opacity:1; pointer-events:auto; }
-  #glossary-panel{
-    position:fixed; top:0; right:0; height:100%; width:min(420px, 92vw);
-    background:var(--panel-bg); border-left:1px solid var(--line-dim);
-    box-shadow:-18px 0 50px rgba(0,0,0,0.55);
-    transform:translateX(100%); transition:transform .25s ease;
-    z-index:41; display:flex; flex-direction:column; padding:22px 24px;
-    overflow-y:auto;
+  #glossary-pop.open{ display:block; }
+  @keyframes glossFade{ from{ opacity:0; transform:translateY(-4px);} to{ opacity:1; transform:none;} }
+  #glossary-pop .gp-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:6px;
   }
-  #glossary-panel.open{ transform:translateX(0); }
-  #glossary-close{
-    position:absolute; top:14px; right:16px;
-    background:none; border:none; color:var(--text-1);
-    font-size:1.1rem; cursor:pointer; padding:4px 8px;
+  #glossary-pop .gp-terme{
+    font-family:'Cinzel','Spectral',Georgia,serif; font-size:1rem; color:var(--arcane-glow);
   }
-  #glossary-close:hover{ color:var(--text-0); }
-  #glossary-kicker{
-    font-family:'Inter',sans-serif; font-size:0.64rem; letter-spacing:0.14em;
-    text-transform:uppercase; color:var(--text-1); margin-bottom:6px;
+  #glossary-pop .gp-close{
+    background:none; border:none; color:var(--text-1); cursor:pointer;
+    font-size:0.85rem; padding:0 2px; line-height:1;
   }
-  #glossary-terme{
-    font-family:'Cinzel','Spectral',Georgia,serif; font-size:1.3rem;
-    color:var(--arcane-glow); margin:0 0 14px;
-  }
-  #glossary-def{ color:var(--text-0); line-height:1.6; font-size:0.96rem; }
+  #glossary-pop .gp-close:hover{ color:var(--text-0); }
+  #glossary-pop .gp-def{ color:var(--text-0); font-size:0.9rem; line-height:1.5; }
+
   #dons-status{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
   .dons-empty{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
 </style>
@@ -128,13 +127,13 @@
   </div>
 </div>
 
-<div id="glossary-overlay"></div>
-<aside id="glossary-panel">
-  <button id="glossary-close" title="Fermer">✕</button>
-  <div id="glossary-kicker">Bibliothèque</div>
-  <h2 id="glossary-terme">—</h2>
-  <div id="glossary-def"></div>
-</aside>
+<div id="glossary-pop">
+  <div class="gp-head">
+    <span class="gp-terme" id="gp-terme">—</span>
+    <button class="gp-close" id="gp-close" title="Fermer">✕</button>
+  </div>
+  <div class="gp-def" id="gp-def"></div>
+</div>
 
 <script src="config.js"></script>
 <script>
@@ -278,6 +277,8 @@ function glossaryLookup(text){
 // On travaille sur le DOM (et pas sur la chaîne HTML) pour ne jamais casser
 // une balise ni re-baliser l'intérieur d'un lien déjà posé.
 function linkifyGlossary(root){
+  // GLOSSARY_AUTOLINK=false (config.js) : on ne lie QUE les [[termes]] balisés à la main
+  if(typeof GLOSSARY_AUTOLINK !== 'undefined' && !GLOSSARY_AUTOLINK) return;
   if(!GLOSSARY_RE) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node){
@@ -315,20 +316,38 @@ function linkifyGlossary(root){
   });
 }
 
-function openGlossary(terme){
+// Affiche la petite fenêtre, ancrée sous le terme cliqué et maintenue dans l'écran
+function openGlossary(terme, anchorEl){
   const entry = glossaryLookup(terme);
-  if(!entry) return;
-  document.getElementById('glossary-terme').textContent = entry.terme;
-  const def = document.getElementById('glossary-def');
+  const pop = document.getElementById('glossary-pop');
+  if(!entry){ pop.classList.remove('open'); return; }
+
+  document.getElementById('gp-terme').textContent = entry.terme;
+  const def = document.getElementById('gp-def');
   def.innerHTML = richText(entry.definition || 'Aucune définition fournie.');
-  linkifyGlossary(def);                          // définitions liées entre elles
-  document.getElementById('glossary-panel').classList.add('open');
-  document.getElementById('glossary-overlay').classList.add('open');
+  linkifyGlossary(def);              // définitions liées entre elles
+
+  pop.classList.add('open');         // afficher d'abord pour mesurer sa taille
+  if(anchorEl){
+    const r = anchorEl.getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    const M = 8;                     // marge écran
+    // sous le terme par défaut ; au-dessus s'il n'y a pas la place en bas
+    let top = r.bottom + window.scrollY + 6;
+    if(r.bottom + h + M > window.innerHeight && r.top - h - 6 > M){
+      top = r.top + window.scrollY - h - 6;
+    }
+    let left = r.left + window.scrollX;
+    const maxLeft = window.scrollX + window.innerWidth - w - M;
+    if(left > maxLeft) left = maxLeft;
+    if(left < window.scrollX + M) left = window.scrollX + M;
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+  }
 }
 
 function closeGlossary(){
-  document.getElementById('glossary-panel').classList.remove('open');
-  document.getElementById('glossary-overlay').classList.remove('open');
+  document.getElementById('glossary-pop').classList.remove('open');
 }
 
 async function loadGlossary(){
@@ -360,10 +379,15 @@ async function loadGlossary(){
 // Délégation : un seul écouteur pour tous les liens (présents et à venir)
 document.addEventListener('click', e => {
   const link = e.target.closest('.glossary-link');
-  if(link){ e.preventDefault(); openGlossary(link.dataset.terme || link.textContent); }
+  if(link){
+    e.preventDefault(); e.stopPropagation();
+    openGlossary(link.dataset.terme || link.textContent, link);
+    return;
+  }
+  // clic en dehors de la fenêtre → fermeture
+  if(!e.target.closest('#glossary-pop')) closeGlossary();
 });
-document.getElementById('glossary-close').addEventListener('click', closeGlossary);
-document.getElementById('glossary-overlay').addEventListener('click', closeGlossary);
+document.getElementById('gp-close').addEventListener('click', closeGlossary);
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeGlossary(); });
 
 // Normalise DATA_SHEETS.dons (string | array | object) en liste d'URLs
