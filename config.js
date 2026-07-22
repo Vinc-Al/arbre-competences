@@ -228,8 +228,8 @@ const DATA_SHEETS = {
   	illusion: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=320736990&single=true&output=csv",
 	abjuration: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=955160217&single=true&output=csv",
 	divination: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1897246214&single=true&output=csv",
-	enchantement: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1649994559&single=true&output=csv",
-  },
+	enchantement: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1649994559&single=true&output=csv"
+},
 
   // ── ONGLETS MARTIAUX (page martial.html) ──────────────────────────────────
   // Même format que `ecoles` : une catégorie martiale = un onglet du Sheet.
@@ -240,6 +240,15 @@ const DATA_SHEETS = {
     // boucliers: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
     // tactiques: "https://docs.google.com/.../pub?gid=XXXX&single=true&output=csv",
   },
+
+  // ── CATALOGUE DES DONS (page dons.html, lecture seule) ────────────────────
+  // Onglets plats (colonnes categorie, nom, description). Tu peux en mettre
+  // PLUSIEURS : ils sont fusionnés en un seul catalogue. Accepte une URL seule
+  // ("...") ou une liste comme ci-dessous.
+  dons: [
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPZXHOfabKIHoR809UZ8DJTGPoVSBR7VujEbSpvsZDwx44Sux0QuQa3uyjV6ZWxgVxm5VxOva5N8Cb/pub?gid=256090465&single=true&output=csv",
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPZXHOfabKIHoR809UZ8DJTGPoVSBR7VujEbSpvsZDwx44Sux0QuQa3uyjV6ZWxgVxm5VxOva5N8Cb/pub?gid=1171618905&single=true&output=csv",
+  ],
 };
 
 // ── BASCULE DE PAGE : magie (défaut) vs martial ───────────────────────────────

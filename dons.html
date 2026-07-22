@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catalogue des dons</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* Page dons : catalogue plat, lecture seule. Réutilise les variables de style.css. */
+  #dons-wrap{ max-width:1100px; margin:0 auto; padding:24px 20px 80px; }
+  .dons-controls{
+    position:sticky; top:0; z-index:5;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+    padding:16px 0; margin-bottom:8px;
+    background:linear-gradient(to bottom, var(--bg-0) 70%, rgba(10,14,20,0));
+  }
+  #dons-search{
+    flex:1; min-width:220px;
+    font-family:'Inter', sans-serif; font-size:0.95rem;
+    color:var(--text-0); background:rgba(255,255,255,0.04);
+    border:1px solid var(--line-dim); border-radius:8px;
+    padding:10px 14px; outline:none;
+  }
+  #dons-search:focus{ border-color:var(--gold); }
+  .dons-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .dons-chip{
+    font-family:'Inter', sans-serif; font-size:0.8rem;
+    color:var(--text-1); background:rgba(255,255,255,0.03);
+    border:1px solid var(--line-dim); border-radius:999px;
+    padding:6px 14px; cursor:pointer; transition:all .15s;
+    white-space:nowrap;
+  }
+  .dons-chip:hover{ color:var(--text-0); border-color:var(--gold); }
+  .dons-chip.active{ color:var(--bg-0); background:var(--gold); border-color:var(--gold); font-weight:600; }
+  #dons-count{ font-family:'Inter', sans-serif; font-size:0.8rem; color:var(--text-1); margin:4px 2px 14px; }
+  .don-card{
+    border:1px solid var(--line-dim); border-radius:10px;
+    background:var(--panel-bg); padding:14px 18px; margin-bottom:10px;
+    transition:border-color .15s;
+  }
+  .don-card:hover{ border-color:rgba(212,175,106,0.5); }
+  .don-head{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
+  .don-nom{ font-family:'Cinzel','Spectral',Georgia,serif; font-size:1.1rem; color:var(--gold-bright); }
+  .don-cat{
+    font-family:'Inter', sans-serif; font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--text-1); border:1px solid var(--line-dim); border-radius:999px; padding:2px 9px;
+  }
+  .don-desc{ color:var(--text-0); line-height:1.55; font-size:0.96rem; white-space:pre-line; }
+  .don-desc em{ color:var(--gold-bright); font-style:italic; }
+  .don-desc strong{ color:var(--text-0); font-weight:600; }
+  .don-desc u{ text-decoration-color:var(--gold); }
+  #dons-status{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
+  .dons-empty{ text-align:center; color:var(--text-1); padding:40px; font-family:'Inter',sans-serif; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="bg-glow"></div>
+  <div id="bg-grid"></div>
+
+  <nav id="main-nav">
+    <a href="magie.html">✦ Arbre de sorts</a>
+    <a href="martial.html">⚔ Voie martiale</a>
+    <a href="dons.html" class="active">📖 Dons</a>
+  </nav>
+
+  <header>
+    <div class="title-block">
+      <h1 id="header-title">Catalogue des dons</h1>
+      <div class="subtitle">Liste de référence — filtrez par catégorie ou recherchez</div>
+    </div>
+  </header>
+
+  <div id="dons-wrap">
+    <div class="dons-controls">
+      <input id="dons-search" type="search" placeholder="Rechercher un don, un mot-clé…" autocomplete="off">
+      <div class="dons-chips" id="dons-chips"></div>
+    </div>
+    <div id="dons-count"></div>
+    <div id="dons-list"><div id="dons-status">Chargement des dons…</div></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* =========================================================
+   CATALOGUE DES DONS — autonome (ne charge pas le moteur d'arbre)
+   Lit un onglet plat du Sheet : colonnes categorie, nom, description.
+   ========================================================= */
+
+// --- petit parseur CSV (gère guillemets, virgules et retours ligne internes) ---
+function parseCSV(text){
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rows = []; let row = [], field = '', inQ = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(inQ){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else inQ = false; }
+      else field += c;
+    } else {
+      if(c === '"') inQ = true;
+      else if(c === ',') { row.push(field); field = ''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  return rows.slice(1)
+    .filter(r => r.some(c => c && c.trim()))
+    .map(r => { const o = {}; headers.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
+}
+
+// --- mise en forme légère : **gras**, *italique*, __souligné__, retours ligne ---
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function richText(raw){
+  let s = esc(raw || '');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/__([^_]+)__/g, '<u>$1</u>');
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return s;
+}
+
+// --- normalisation pour la recherche (insensible casse + accents) ---
+function norm(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+let ALL_DONS = [];
+let activeCat = '*';        // '*' = toutes
+let searchTerm = '';
+
+function render(){
+  const list = document.getElementById('dons-list');
+  const q = norm(searchTerm);
+  const filtered = ALL_DONS.filter(d => {
+    if(activeCat !== '*' && d.categorie !== activeCat) return false;
+    if(q && !norm(d.nom + ' ' + d.description + ' ' + d.categorie).includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('dons-count').textContent =
+    `${filtered.length} don${filtered.length > 1 ? 's' : ''}` +
+    (activeCat !== '*' ? ` — ${activeCat}` : '') + (q ? ` — « ${searchTerm} »` : '');
+
+  if(!filtered.length){ list.innerHTML = '<div class="dons-empty">Aucun don ne correspond.</div>'; return; }
+
+  list.innerHTML = filtered.map(d => `
+    <div class="don-card">
+      <div class="don-head">
+        <span class="don-nom">${esc(d.nom || '—')}</span>
+        ${d.categorie ? `<span class="don-cat">${esc(d.categorie)}</span>` : ''}
+      </div>
+      <div class="don-desc">${richText(d.description)}</div>
+    </div>`).join('');
+}
+
+function buildChips(){
+  const cats = [...new Set(ALL_DONS.map(d => d.categorie).filter(Boolean))];
+  const chips = document.getElementById('dons-chips');
+  const mk = (key, label) => {
+    const b = document.createElement('button');
+    b.className = 'dons-chip' + (key === activeCat ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => {
+      activeCat = key;
+      [...chips.children].forEach(c => c.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    return b;
+  };
+  chips.appendChild(mk('*', 'Toutes'));
+  cats.forEach(c => chips.appendChild(mk(c, c)));
+}
+
+// Normalise DATA_SHEETS.dons (string | array | object) en liste d'URLs
+function donsSources(){
+  const d = (typeof DATA_SHEETS !== 'undefined') ? DATA_SHEETS.dons : '';
+  let arr;
+  if(Array.isArray(d)) arr = d;
+  else if(d && typeof d === 'object') arr = Object.values(d);
+  else arr = [d];
+  return arr.map(u => (u || '').trim()).filter(Boolean);
+}
+
+async function loadDons(){
+  const status = document.getElementById('dons-status');
+  const urls = donsSources();
+  if(!urls.length){
+    status.innerHTML = 'Aucune source configurée. Renseigne <code>DATA_SHEETS.dons</code> dans config.js (une URL ou une liste).';
+    return;
+  }
+
+  // Charge toutes les sources en parallèle ; une source en échec n'empêche pas les autres.
+  const results = await Promise.allSettled(urls.map(async url => {
+    const res = await fetch(url, { cache: 'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return parseCSV(await res.text());
+  }));
+
+  ALL_DONS = [];
+  let failed = 0;
+  results.forEach(r => {
+    if(r.status === 'fulfilled') ALL_DONS = ALL_DONS.concat(r.value);
+    else { failed++; console.warn('Source de dons inaccessible :', r.reason && r.reason.message); }
+  });
+
+  if(!ALL_DONS.length){
+    status.textContent = failed ? `Aucun don chargé (${failed}/${urls.length} source(s) en échec).` : 'Onglet(s) vide(s).';
+    return;
+  }
+  buildChips();
+  render();
+  if(failed) console.warn(`${failed} source(s) de dons sur ${urls.length} n'ont pas pu être chargées.`);
+}
+
+document.getElementById('dons-search').addEventListener('input', e => {
+  searchTerm = e.target.value;
+  render();
+});
+
+loadDons();
+</script>
+</body>
+</html>

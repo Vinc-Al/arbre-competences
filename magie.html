@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Arbre de compétences — Voie martiale</title>
+<title>Arbre de compétences — Écoles de magie</title>
 <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,15 +14,15 @@
   <div id="bg-grid"></div>
 
   <nav id="main-nav">
-    <a href="magie.html">✦ Arbre de sorts</a>
-    <a href="martial.html" class="active">⚔ Voie martiale</a>
+    <a href="magie.html" class="active">✦ Arbre de sorts</a>
+    <a href="martial.html">⚔ Voie martiale</a>
     <a href="dons.html">📖 Dons</a>
   </nav>
 
   <header>
     <div class="title-block">
-      <h1 id="header-title">Voie martiale</h1>
-      <div class="subtitle">Données chargées depuis Google Sheets (CSV) — par joueur et par catégorie martiale</div>
+      <h1 id="header-title">Écoles de Magie</h1>
+      <div class="subtitle">Données chargées depuis Google Sheets (CSV) — par joueur et par école</div>
     </div>
     <div class="right-block">
       <div class="player-chip">
@@ -40,7 +40,7 @@
 
   <div id="school-tabs"></div>
 
-  <div id="element-bar" style="display:none">
+  <div id="element-bar">
     <div id="element-select-wrap">
       <button id="element-select-btn">
         <span id="element-select-label">Éléments : aucun</span>
@@ -84,7 +84,6 @@
   <div class="panel-footer" id="panel-footer"></div>
 </aside>
 
-<script>window.APP_MODE = "martial";</script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 
