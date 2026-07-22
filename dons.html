@@ -7,7 +7,18 @@
 <link rel="stylesheet" href="style.css">
 <style>
   /* Page dons : catalogue plat, lecture seule. Réutilise les variables de style.css. */
-  #dons-wrap{ max-width:1100px; margin:0 auto; padding:24px 20px 80px; }
+
+  /* style.css est pensé pour une appli plein écran (canvas d'arbre) :
+     html,body{overflow:hidden} + #app{height:100vh}. Une liste longue doit au
+     contraire pouvoir défiler → on repasse la page en document classique. */
+  html, body{ overflow:auto; height:auto; }
+  #app{ height:auto; min-height:100vh; }
+
+  /* #bg-glow / #bg-grid sont position:absolute avec z-index:0 et un fond OPAQUE.
+     En ordre de peinture CSS, un élément positionné passe au-dessus du contenu
+     non positionné : sans position+z-index ici, les cartes seraient masquées
+     par le fond (elles étaient bien générées, mais invisibles). */
+  #dons-wrap{ position:relative; z-index:2; max-width:1100px; margin:0 auto; padding:24px 20px 80px; }
   .dons-controls{
     position:sticky; top:0; z-index:5;
     display:flex; flex-wrap:wrap; gap:12px; align-items:center;
