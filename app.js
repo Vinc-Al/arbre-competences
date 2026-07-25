@@ -2362,6 +2362,10 @@ function parseRichText(raw){
   });
   // **gras**
   safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // __souligné__
+  safe = safe.replace(/__([^_]+)__/g, '<u>$1</u>');
+  // *italique* (APRÈS le gras, sinon ** serait capturé par *)
+  safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   // sauts de ligne
   safe = safe.replace(/\n/g, '<br>');
   return safe;
