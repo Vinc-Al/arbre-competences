@@ -1806,7 +1806,8 @@ const GAL = {
   NODE_D: 64,        // diamètre d'un nœud
   A_MARGIN: 26,      // marge mini entre deux nœuds voisins d'un même anneau
   RING_GAP: 46,      // écart mini entre deux anneaux
-  MIN_R0: 95,        // rayon minimal du 1er anneau
+  MIN_R0: 95,        // rayon minimal du 1er anneau (R0)
+  LAMBDA: 16,        // poids du nb de perks dans le rayon : R(TX) = R0 + TX·STEP + NB_PERKS·LAMBDA
   PITCH_MAX: 0.60,   // écart angulaire MAX entre deux feuilles voisines (~34°)
   SECTOR_MAX: 4.19,  // ouverture angulaire MAX de l'éventail (~240°) → laisse un vide, pas de tour complet
   REF: -Math.PI/2,   // l'éventail s'ouvre vers le HAUT
@@ -1856,20 +1857,20 @@ function galaxyLayout(skills){
     }
   });
 
-  // 5) Rayon ADAPTATIF par tier : chaque anneau est repoussé assez loin pour que
-  //    ses nœuds (à l'écart angulaire réel) ne se chevauchent pas, tout en
-  //    restant croissant (au moins STEP entre deux anneaux).
+  // 5) Rayon par tier — formule réglable :
+  //       R(TX) = R0 + TX·STEP + NB_PERKS(TX)·LAMBDA
+  //    • TX·STEP        : progression de base d'un anneau à l'autre
+  //    • NB_PERKS·LAMBDA: pousse un tier chargé plus loin du centre (LAMBDA réglable)
+  //    Le max(prev+STEP) garantit que les anneaux restent croissants et distincts,
+  //    même si un tier extérieur a moins de perks qu'un tier intérieur.
   const nodesByTier = {};
   skills.forEach(s => { const t = +s.niveau||0; (nodesByTier[t] = nodesByTier[t]||[]).push(s.id); });
   const tiers = Object.keys(nodesByTier).map(Number).sort((a,b)=>a-b);
   const Rt = {}; let prev = 0;
   tiers.forEach((t, idx) => {
-    const angs = nodesByTier[t].map(id => angle[id]).sort((a,b)=>a-b);
-    let minGap = Infinity;
-    for(let i=1;i<angs.length;i++) minGap = Math.min(minGap, angs[i]-angs[i-1]);
-    const needArc = (minGap < Infinity && minGap > 1e-4) ? (GAL.NODE_D + GAL.A_MARGIN) / minGap : 0;
-    let r = Math.max(GAL.MIN_R0, needArc);
-    if(idx > 0) r = Math.max(r, prev + STEP);
+    const nb = nodesByTier[t].length;
+    let r = GAL.MIN_R0 + t * STEP + nb * GAL.LAMBDA;
+    if(idx > 0) r = Math.max(r, prev + STEP);   // sécurité : anneaux croissants
     Rt[t] = r; prev = r;
   });
   const Rtier = t => Rt[+t||0] ?? (GAL.MIN_R0 + (+t||0)*STEP);
@@ -2430,6 +2431,10 @@ const STAT_DEFS = [
   { key: 'duree',  label: 'Durée' },
   { key: 'action', label: 'Ressource d\'Action' },
   { key: 'invocation', label: 'Invocation' },
+  // Colonne d'équilibrage. L'en-tête est normalisé en minuscules par parseCSV,
+  // donc "Temps de recharge" → "temps de recharge" ; on accepte aussi quelques
+  // variantes d'écriture (underscore, "recharge", "cooldown").
+  { keys: ['temps de recharge', 'temps_de_recharge', 'recharge', 'cooldown'], label: 'Temps de recharge' },
 ];
 
 // Découpe une description multi-lignes en segments, dans l'ordre du Sheet :
@@ -2475,11 +2480,17 @@ function buildDescriptionHtml(raw){
 // Corps de fiche complet, commun aux deux arbres
 function buildFicheBody(d){
   const val = k => (d[k] == null ? '' : String(d[k]));
+  // Résout une stat : soit une clé unique, soit la 1re clé non vide d'une liste d'alias
+  const statVal = s => {
+    const keys = s.keys || [s.key];
+    for(const k of keys){ if(val(k).trim()) return val(k); }
+    return '';
+  };
 
   // 1. Stats issues de colonnes dédiées (Évocation ; vides côté Elements)
   const statLines = STAT_DEFS
-    .filter(s => val(s.key).trim())
-    .map(s => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${parseRichText(val(s.key))}</div>`)
+    .filter(s => statVal(s).trim())
+    .map(s => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${parseRichText(statVal(s))}</div>`)
     .join('');
 
   // 2. Description (paragraphes + puces "→" du Sheet)
