@@ -1805,7 +1805,6 @@ function buildLayout(skills){
 const GAL = { NODE_D: 64, A_MARGIN: 26, RING_GAP: 46, MIN_R0: 95 };
 
 function galaxyLayout(skills){
-  const { byBranche, brancheParent, rootBranches } = buildBrancheGraph(skills);
   const STEP = GAL.NODE_D + GAL.RING_GAP;
 
   // 1) Rayon par tier : R0 auto pour garantir l'espace angulaire sur CHAQUE anneau
@@ -1819,64 +1818,63 @@ function galaxyLayout(skills){
   });
   const Rtier = t => R0 + (+t||0) * STEP;
 
-  // 2) Arbre des branches (qui forke de qui)
-  const childBranches = p => Object.keys(brancheParent)
-    .filter(k => brancheParent[k] && brancheParent[k].parentBranche === p);
-  const spreadMemo = {};
-  function spread(b){
-    if(spreadMemo[b] != null) return spreadMemo[b];
-    const kids = childBranches(b);
-    const v = kids.length ? kids.reduce((a,k)=>a+spread(k),0) : 1;
-    return spreadMemo[b] = Math.max(1, v);
-  }
+  // 2) Graphe de NŒUDS (et non de branches) : chaque nœud connaît ses enfants.
+  //    C'est ce qui permet aux frères d'un même tier de s'éventailler.
+  const byId = {};
+  skills.forEach(s => { byId[s.id] = s; });
+  const parseParents = pid => String(pid||'').split(',').map(x=>x.trim()).filter(Boolean);
+  // parent "de structure" = 1er parent existant ; les autres = liens de convergence
+  const firstParent = s => { const ps = parseParents(s.parent_id).filter(p => byId[p]); return ps[0] || null; };
+  const children = {};
+  skills.forEach(s => { const p = firstParent(s); if(p){ (children[p] = children[p] || []).push(s.id); } });
+  const roots = skills.filter(s => !firstParent(s)).map(s => s.id);
 
-  // 3) Angle par branche : secteurs autour du cercle, sous-secteurs pour les forks
-  const brancheAngle = {};
-  function allocate(b, a0, a1){
-    brancheAngle[b] = (a0 + a1) / 2;           // ligne principale au centre du secteur
-    const kids = childBranches(b);
-    if(!kids.length) return;
-    const total = kids.reduce((a,k)=>a+spread(k), 0);
-    let cursor = a0;
-    kids.forEach(k => {
-      const w = (a1 - a0) * spread(k) / total;
-      allocate(k, cursor, cursor + w);
-      cursor += w;
-    });
+  // 3) Layout radial : chaque nœud reçoit un secteur angulaire proportionnel à
+  //    son nombre de feuilles ; ses enfants se répartissent dedans (éventail).
+  const leafMemo = {};
+  function leaves(id){
+    if(leafMemo[id] != null) return leafMemo[id];
+    const ch = children[id] || [];
+    return leafMemo[id] = ch.length ? ch.reduce((a,c)=>a+leaves(c), 0) : 1;
   }
-  const totalRoot = rootBranches.reduce((a,b)=>a+spread(b), 0) || 1;
+  const angle = {};
+  function allocate(id, a0, a1){
+    const ch = children[id] || [];
+    if(!ch.length){ angle[id] = (a0 + a1) / 2; return; }
+    const total = ch.reduce((a,c)=>a+leaves(c), 0);
+    let cur = a0;
+    ch.forEach(c => { const w = (a1 - a0) * leaves(c) / total; allocate(c, cur, cur + w); cur += w; });
+    // le parent se centre sur l'étendue de ses enfants
+    angle[id] = (angle[ch[0]] + angle[ch[ch.length-1]]) / 2;
+  }
+  const totalLeaves = roots.reduce((a,r)=>a+leaves(r), 0) || 1;
   let cur = -Math.PI/2;                          // premier bras vers le haut
-  rootBranches.forEach(b => {
-    const w = 2*Math.PI * spread(b) / totalRoot;
-    allocate(b, cur, cur + w);
+  roots.forEach(r => {
+    const w = 2*Math.PI * leaves(r) / totalLeaves;
+    allocate(r, cur, cur + w);
     cur += w;
   });
 
-  // 4) Positions : angle = branche (bissectrice si parents multiples), rayon = tier
-  const idToBranche = {}; skills.forEach(s => idToBranche[s.id] = s.branche || s.id);
-  const parseParents = pid => String(pid||'').split(',').map(x=>x.trim()).filter(Boolean);
-  const nodeAngle = {};
-  skills.forEach(s => { nodeAngle[s.id] = brancheAngle[idToBranche[s.id]] ?? -Math.PI/2; });
-  // convergence : moyenne circulaire des angles des parents
+  // 4) Convergence : un nœud à plusieurs parents se recentre sur leur bissectrice
   skills.forEach(s => {
-    const ps = parseParents(s.parent_id).filter(p => nodeAngle[p] != null);
+    const ps = parseParents(s.parent_id).filter(p => angle[p] != null);
     if(ps.length >= 2){
-      const sx = ps.reduce((a,p)=>a+Math.cos(nodeAngle[p]),0);
-      const sy = ps.reduce((a,p)=>a+Math.sin(nodeAngle[p]),0);
-      nodeAngle[s.id] = Math.atan2(sy, sx);
+      const sx = ps.reduce((a,p)=>a+Math.cos(angle[p]), 0);
+      const sy = ps.reduce((a,p)=>a+Math.sin(angle[p]), 0);
+      angle[s.id] = Math.atan2(sy, sx);
     }
   });
 
+  // 5) Positions polaires
   const Rmax = Rtier(Math.max(0, ...Object.keys(tierCount).map(Number)));
   const CX = Rmax + 120, CY = Rmax + 120;
   const pos = {};
   skills.forEach(s => {
-    const R = Rtier(s.niveau), a = nodeAngle[s.id];
+    const R = Rtier(s.niveau), a = angle[s.id] ?? -Math.PI/2;
     pos[s.id] = { x: CX + R*Math.cos(a), y: CY + R*Math.sin(a), r: R, a };
   });
-
   const tiers = Object.keys(tierCount).map(Number).sort((x,y)=>x-y);
-  return { pos, CX, CY, Rmax, Rtier, tiers, byBranche, rootBranches, parseParents, idToBranche };
+  return { pos, CX, CY, Rmax, Rtier, tiers, roots, parseParents };
 }
 
 function renderGalaxy(){
