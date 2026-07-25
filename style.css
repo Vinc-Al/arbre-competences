@@ -899,3 +899,31 @@
     header h1{ font-size:1.1rem; }
     header .subtitle{ display:none; }
   }
+/* ── Bibliothèque : liens [[terme]] cliquables + popover de définition ────────── */
+/* Partagé par toutes les pages qui affichent des descriptions (sorts, éléments, martial). */
+.glossary-link{
+  color:var(--arcane, #6fa8ff); text-decoration:none;
+  border-bottom:1px dashed rgba(111,168,255,0.5);
+  cursor:help; transition:color .15s, border-color .15s;
+}
+.glossary-link:hover{ color:var(--arcane-glow, #a9c9ff); border-bottom-color:var(--arcane-glow, #a9c9ff); }
+
+#glossary-pop{
+  position:absolute; z-index:120;
+  width:min(340px, 88vw);
+  background:var(--panel-bg, #12161f);
+  border:1px solid rgba(111,168,255,0.35);
+  border-radius:10px;
+  box-shadow:0 12px 34px rgba(0,0,0,0.6);
+  padding:12px 14px 14px;
+  display:none;
+}
+#glossary-pop.open{ display:block; animation:glossFade .13s ease-out; }
+@keyframes glossFade{ from{ opacity:0; transform:translateY(-4px);} to{ opacity:1; transform:none;} }
+#glossary-pop .gp-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:6px; }
+#glossary-pop .gp-terme{ font-family:'Cinzel','Spectral',Georgia,serif; font-size:1rem; color:var(--arcane-glow, #a9c9ff); }
+#glossary-pop .gp-close{ background:none; border:none; color:var(--text-1, #9aa4b8); cursor:pointer; font-size:0.85rem; padding:0 2px; line-height:1; }
+#glossary-pop .gp-close:hover{ color:var(--text-0, #e8ecf4); }
+#glossary-pop .gp-def{ color:var(--text-0, #e8ecf4); font-size:0.9rem; line-height:1.5; }
+#glossary-pop .gp-def em{ color:var(--gold-bright, #e8c987); font-style:italic; }
+#glossary-pop .gp-def strong{ font-weight:600; }

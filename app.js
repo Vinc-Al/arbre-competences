@@ -2266,9 +2266,91 @@ function formatEffects(effetsRaw){
    **attaque de sort à distance** [élémentaire](element) sur une
    **cible unique**.
    ========================================================= */
+
+/* =========================================================
+   BIBLIOTHÈQUE (glossaire) — commune à toutes les vues
+   =========================================================
+   Rend cliquables les [[termes]] dans n'importe quelle description
+   (sorts, effets élémentaires, perks martiaux). Un clic ouvre une
+   petite fenêtre avec la définition. Source : DATA_SHEETS.bibliotheque
+   (onglet plat : terme, definition, + alias facultatif).
+   ========================================================= */
+let GLOSSARY = {};   // clé normalisée -> { terme, definition }
+
+function glossNorm(s){ return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+
+async function loadGlossary(){
+  const d = (typeof DATA_SHEETS !== 'undefined') ? DATA_SHEETS.bibliotheque : '';
+  let urls = Array.isArray(d) ? d : (d && typeof d === 'object' ? Object.values(d) : [d]);
+  urls = urls.map(u => (u||'').trim()).filter(Boolean);
+  if(!urls.length) return;
+  const results = await Promise.allSettled(urls.map(u => fetchCSV(u)));
+  results.forEach(r => {
+    if(r.status !== 'fulfilled'){ console.warn('Bibliothèque inaccessible :', r.reason && r.reason.message); return; }
+    r.value.forEach(row => {
+      const terme = (row.terme || row.nom || '').trim();
+      if(!terme) return;
+      const entry = { terme, definition: row.definition || row.description || '' };
+      GLOSSARY[glossNorm(terme)] = entry;
+      (row.alias || '').split(',').map(a=>a.trim()).filter(Boolean).forEach(a => GLOSSARY[glossNorm(a)] = entry);
+    });
+  });
+}
+
+// Popover créé une seule fois, à la volée (aucun HTML à ajouter aux pages)
+function ensureGlossaryPopover(){
+  let pop = document.getElementById('glossary-pop');
+  if(pop) return pop;
+  pop = document.createElement('div');
+  pop.id = 'glossary-pop';
+  pop.innerHTML = `<div class="gp-head"><span class="gp-terme" id="gp-terme">—</span>` +
+                  `<button class="gp-close" id="gp-close" title="Fermer">✕</button></div>` +
+                  `<div class="gp-def" id="gp-def"></div>`;
+  document.body.appendChild(pop);
+  pop.querySelector('#gp-close').addEventListener('click', closeGlossary);
+  return pop;
+}
+
+function openGlossary(terme, anchorEl){
+  const entry = GLOSSARY[glossNorm(terme)];
+  const pop = ensureGlossaryPopover();
+  if(!entry){ pop.classList.remove('open'); return; }
+  pop.querySelector('#gp-terme').textContent = entry.terme;
+  pop.querySelector('#gp-def').innerHTML = parseRichText(entry.definition || 'Aucune définition fournie.');
+  pop.classList.add('open');
+  if(anchorEl){
+    const r = anchorEl.getBoundingClientRect();
+    const w = pop.offsetWidth, h = pop.offsetHeight, M = 8;
+    let top = r.bottom + window.scrollY + 6;
+    if(r.bottom + h + M > window.innerHeight && r.top - h - 6 > M) top = r.top + window.scrollY - h - 6;
+    let left = r.left + window.scrollX;
+    left = Math.max(window.scrollX + M, Math.min(left, window.scrollX + window.innerWidth - w - M));
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+  }
+}
+
+function closeGlossary(){
+  const pop = document.getElementById('glossary-pop');
+  if(pop) pop.classList.remove('open');
+}
+
+// Délégation globale : les liens sont dans le panneau, les définitions, etc.
+document.addEventListener('click', e => {
+  const link = e.target.closest('.glossary-link');
+  if(link){ e.preventDefault(); e.stopPropagation(); openGlossary(link.dataset.terme || link.textContent, link); return; }
+  if(!e.target.closest('#glossary-pop')) closeGlossary();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeGlossary(); });
+
+
 function parseRichText(raw){
   if(!raw) return '';
   let safe = raw.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // [[terme]] → lien de bibliothèque (AVANT les autres crochets, sinon [texte]
+  // capturerait l'intérieur). Cliquable partout : sorts, éléments, martial.
+  safe = safe.replace(/\[\[([^\]]+)\]\]/g, (m, t) =>
+    `<a class="glossary-link" data-terme="${t.replace(/"/g,'&quot;')}">${t}</a>`);
   // [texte](couleur) → mark coloré
   safe = safe.replace(/\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/g, (m, txt, color) => {
     return `<mark class="color-${color}">${txt}</mark>`;
@@ -2532,6 +2614,7 @@ document.getElementById('zoom-reset').addEventListener('click', () => {
 
 async function init(){
   await loadData();
+  await loadGlossary();
   buildSchoolTabs();
   applySchoolTheme();
   renderTree();
