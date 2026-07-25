@@ -1910,13 +1910,15 @@ function renderGalaxy(){
   });
 
   function line(x1,y1,x2,y2,conv){
+    // Tous les liens (héritage principal ET convergence) : même trait plein,
+    // couleur du thème. Le paramètre conv est conservé pour compat mais n'altère
+    // plus l'apparence — un lien de convergence ressemble aux autres.
     const p = document.createElementNS(NS,'path');
     p.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
     p.setAttribute('fill','none');
-    p.setAttribute('stroke', conv ? '#7F77DD' : theme.color);
-    p.setAttribute('stroke-width', conv ? '1.8' : '2');
-    p.setAttribute('opacity', conv ? '0.75' : '0.5');
-    if(conv) p.setAttribute('stroke-dasharray','5 4');
+    p.setAttribute('stroke', theme.color);
+    p.setAttribute('stroke-width', '2');
+    p.setAttribute('opacity', '0.5');
     svg.appendChild(p);
   }
 
@@ -2181,6 +2183,31 @@ function updatePointsDisplay(skills){
   }
 }
 
+/* Recalcule la disponibilité : un nœud verrouillé devient "available" quand
+   TOUS ses prérequis sont débloqués (règle ET → gère la convergence « il faut
+   ces N perks pour débloquer celle-là »).
+   Prérequis d'un nœud = sa liste parent_id ("a,b,c" = les trois requis) ;
+   à défaut, son prédécesseur dans la même branche (niveau-1) pour les chaînes. */
+function prereqsOf(skill, byId, predOf){
+  const ps = String(skill.parent_id || '').split(',').map(x=>x.trim())
+    .filter(Boolean).filter(p => byId[p]);
+  if(ps.length) return ps;                         // parents explicites (ET)
+  const pred = predOf[skill.branche + '@' + ((+skill.niveau||0) - 1)];
+  return pred ? [pred] : [];                        // sinon prédécesseur de chaîne
+}
+
+function recomputeAvailability(){
+  const byId = {}; allSkills.forEach(s => byId[s.id] = s);
+  const predOf = {};
+  allSkills.forEach(s => { predOf[s.branche + '@' + (+s.niveau||0)] = s.id; });
+  allSkills = allSkills.map(s => {
+    if(s.etat !== 'locked') return s;
+    const pr = prereqsOf(s, byId, predOf);
+    const ok = pr.length && pr.every(p => byId[p] && byId[p].etat === 'unlocked');
+    return ok ? { ...s, etat: 'available' } : s;
+  });
+}
+
 /* ── Déblocage MJ (double-clic sur un nœud available) ── */
 function mjUnlock(skill){
   if(skill.etat !== 'available'){
@@ -2198,12 +2225,7 @@ function mjUnlock(skill){
     return;
   }
   allSkills = allSkills.map(s => s.id === skill.id ? { ...s, etat: 'unlocked' } : s);
-  allSkills = allSkills.map(s => {
-    if(s.etat !== 'locked') return s;
-    if(s.branche === skill.branche && s.niveau === skill.niveau + 1) return { ...s, etat: 'available' };
-    if(s.parent_id === skill.id) return { ...s, etat: 'available' };
-    return s;
-  });
+  recomputeAvailability();   // ouvre les nœuds dont TOUS les prérequis sont désormais remplis
   renderTree();
   showToast(`✓ ${skill.nom} débloqué (${cout} pt${cout!==1?'s':''})`, 'success');
   saveMjChanges();
@@ -2630,6 +2652,7 @@ document.getElementById('zoom-reset').addEventListener('click', () => {
 async function init(){
   await loadData();
   await loadGlossary();
+  recomputeAvailability();   // disponibilité cohérente dès le chargement (règle ET des prérequis)
   buildSchoolTabs();
   applySchoolTheme();
   renderTree();
