@@ -270,6 +270,9 @@ const GLOSSARY_AUTOLINK = false;
 // martial.html pose window.APP_MODE='martial' AVANT de charger ce fichier.
 // En mode martial on ne charge QUE les onglets martiaux (pas les écoles de magie).
 const APP_MODE = (typeof window !== 'undefined' && window.APP_MODE) || 'magic';
+// En mode martial, la catégorie s'affiche en GALAXIE (centre + anneaux de tier)
+// au lieu de l'arbre vertical. Même données, rendu polaire.
+const galaxyMode = (APP_MODE === 'martial');
 if(APP_MODE === 'martial'){
   DATA_SHEETS.competences = '';          // pas de sorts de magie sur la page martiale
   DATA_SHEETS.ecoles = DATA_SHEETS.martial;

@@ -1790,7 +1790,174 @@ function buildLayout(skills){
   return positions;
 }
 
+
+/* =========================================================
+   RENDU GALAXIE (mode martial)
+   =========================================================
+   Rendu POLAIRE du même graphe d'arbre : centre = catégorie,
+   chaque anneau = un tier (rayon croissant), chaque bras = une
+   branche racine (une arme), l'héritage donne l'angle. Un nœud à
+   plusieurs parents (convergence inter-armes) se pose sur la
+   bissectrice de ses parents.
+   Réutilise buildBrancheGraph, renderIcon, openPanel, le canvas
+   #tree-canvas et son zoom/pan — seul le calcul de position change.
+   ========================================================= */
+const GAL = { NODE_D: 64, A_MARGIN: 26, RING_GAP: 46, MIN_R0: 95 };
+
+function galaxyLayout(skills){
+  const { byBranche, brancheParent, rootBranches } = buildBrancheGraph(skills);
+  const STEP = GAL.NODE_D + GAL.RING_GAP;
+
+  // 1) Rayon par tier : R0 auto pour garantir l'espace angulaire sur CHAQUE anneau
+  const tierCount = {};
+  skills.forEach(s => { const t = +s.niveau || 0; tierCount[t] = (tierCount[t]||0) + 1; });
+  let R0 = GAL.MIN_R0;
+  Object.keys(tierCount).forEach(t => {
+    t = +t;
+    const need = tierCount[t] * (GAL.NODE_D + GAL.A_MARGIN) / (2*Math.PI) - t*STEP;
+    if(need > R0) R0 = need;
+  });
+  const Rtier = t => R0 + (+t||0) * STEP;
+
+  // 2) Arbre des branches (qui forke de qui)
+  const childBranches = p => Object.keys(brancheParent)
+    .filter(k => brancheParent[k] && brancheParent[k].parentBranche === p);
+  const spreadMemo = {};
+  function spread(b){
+    if(spreadMemo[b] != null) return spreadMemo[b];
+    const kids = childBranches(b);
+    const v = kids.length ? kids.reduce((a,k)=>a+spread(k),0) : 1;
+    return spreadMemo[b] = Math.max(1, v);
+  }
+
+  // 3) Angle par branche : secteurs autour du cercle, sous-secteurs pour les forks
+  const brancheAngle = {};
+  function allocate(b, a0, a1){
+    brancheAngle[b] = (a0 + a1) / 2;           // ligne principale au centre du secteur
+    const kids = childBranches(b);
+    if(!kids.length) return;
+    const total = kids.reduce((a,k)=>a+spread(k), 0);
+    let cursor = a0;
+    kids.forEach(k => {
+      const w = (a1 - a0) * spread(k) / total;
+      allocate(k, cursor, cursor + w);
+      cursor += w;
+    });
+  }
+  const totalRoot = rootBranches.reduce((a,b)=>a+spread(b), 0) || 1;
+  let cur = -Math.PI/2;                          // premier bras vers le haut
+  rootBranches.forEach(b => {
+    const w = 2*Math.PI * spread(b) / totalRoot;
+    allocate(b, cur, cur + w);
+    cur += w;
+  });
+
+  // 4) Positions : angle = branche (bissectrice si parents multiples), rayon = tier
+  const idToBranche = {}; skills.forEach(s => idToBranche[s.id] = s.branche || s.id);
+  const parseParents = pid => String(pid||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const nodeAngle = {};
+  skills.forEach(s => { nodeAngle[s.id] = brancheAngle[idToBranche[s.id]] ?? -Math.PI/2; });
+  // convergence : moyenne circulaire des angles des parents
+  skills.forEach(s => {
+    const ps = parseParents(s.parent_id).filter(p => nodeAngle[p] != null);
+    if(ps.length >= 2){
+      const sx = ps.reduce((a,p)=>a+Math.cos(nodeAngle[p]),0);
+      const sy = ps.reduce((a,p)=>a+Math.sin(nodeAngle[p]),0);
+      nodeAngle[s.id] = Math.atan2(sy, sx);
+    }
+  });
+
+  const Rmax = Rtier(Math.max(0, ...Object.keys(tierCount).map(Number)));
+  const CX = Rmax + 120, CY = Rmax + 120;
+  const pos = {};
+  skills.forEach(s => {
+    const R = Rtier(s.niveau), a = nodeAngle[s.id];
+    pos[s.id] = { x: CX + R*Math.cos(a), y: CY + R*Math.sin(a), r: R, a };
+  });
+
+  const tiers = Object.keys(tierCount).map(Number).sort((x,y)=>x-y);
+  return { pos, CX, CY, Rmax, Rtier, tiers, byBranche, rootBranches, parseParents, idToBranche };
+}
+
+function renderGalaxy(){
+  const skills = currentSkills();
+  const canvas = document.getElementById('tree-canvas');
+  if(!skills.length){ canvas.innerHTML = '<svg id="links"></svg>'; updatePointsDisplay(skills); return; }
+
+  const L = galaxyLayout(skills);
+  const size = 2*L.Rmax + 240;
+  canvas.innerHTML = '<svg id="links"></svg>';
+  const svg = document.getElementById('links');
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  svg.setAttribute('width', size); svg.setAttribute('height', size);
+  const theme = schoolTheme(currentSchool);
+  const NS = 'http://www.w3.org/2000/svg';
+
+  // Anneaux de tier
+  L.tiers.forEach(t => {
+    const c = document.createElementNS(NS,'circle');
+    c.setAttribute('cx', L.CX); c.setAttribute('cy', L.CY); c.setAttribute('r', L.Rtier(t));
+    c.setAttribute('fill','none'); c.setAttribute('stroke', theme.color);
+    c.setAttribute('stroke-width','1'); c.setAttribute('opacity','0.18');
+    svg.appendChild(c);
+  });
+
+  function line(x1,y1,x2,y2,conv){
+    const p = document.createElementNS(NS,'path');
+    p.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke', conv ? '#7F77DD' : theme.color);
+    p.setAttribute('stroke-width', conv ? '1.8' : '2');
+    p.setAttribute('opacity', conv ? '0.75' : '0.5');
+    if(conv) p.setAttribute('stroke-dasharray','5 4');
+    svg.appendChild(p);
+  }
+
+  // Liens d'héritage : chaque nœud vers son (ses) parent(s)
+  skills.forEach(s => {
+    const to = L.pos[s.id]; if(!to) return;
+    const ps = L.parseParents(s.parent_id).filter(p => L.pos[p]);
+    if(ps.length){
+      ps.forEach((p,i) => line(L.pos[p].x, L.pos[p].y, to.x, to.y, i>0));
+    } else {
+      // nœud racine d'un bras (T0) → relié au centre
+      line(L.CX, L.CY, to.x, to.y, false);
+    }
+  });
+
+  // Nœud central = catégorie
+  const rootDiv = document.createElement('div');
+  rootDiv.className = 'node root school-root';
+  rootDiv.style.left = L.CX + 'px'; rootDiv.style.top = L.CY + 'px';
+  rootDiv.style.transform = 'translate(-50%,-50%)';
+  rootDiv.style.borderColor = theme.color;
+  rootDiv.style.boxShadow = `0 0 26px ${theme.glow}`;
+  rootDiv.innerHTML = `<span class="icon" style="filter:none;">✦</span>`;
+  canvas.appendChild(rootDiv);
+
+  // Nœuds
+  skills.forEach(s => {
+    const p = L.pos[s.id]; if(!p) return;
+    const div = document.createElement('div');
+    const budgetLocked = isBudgetLocked(s);
+    const tierMax = playerProfile.tier_max !== undefined ? playerProfile.tier_max : 999;
+    const tierBlocked = s.etat === 'available' && s.niveau > tierMax;
+    div.className = 'node ' + (s.etat || 'locked') + ((budgetLocked||tierBlocked) ? ' budget-locked' : '');
+    div.style.left = p.x + 'px'; div.style.top = p.y + 'px';
+    div.style.transform = 'translate(-50%,-50%)';
+    div.style.setProperty('--branche-color', theme.color);
+    div.innerHTML = `<span class="icon">${renderIcon(s.icone)}</span><span class="node-label">${(s.nom||s.id)}</span>`;
+    div.addEventListener('click', e => { e.stopPropagation(); openPanel(s); });
+    div.addEventListener('dblclick', e => { e.stopPropagation(); mjUnlock(s); });
+    canvas.appendChild(div);
+  });
+
+  updatePointsDisplay(skills);
+}
+
+
 function renderTree(){
+  if(typeof galaxyMode !== 'undefined' && galaxyMode){ renderGalaxy(); return; }
   const skills = currentSkills();
   if(!skills.length){
     document.getElementById('tree-canvas').innerHTML = '<svg id="links"></svg>';
