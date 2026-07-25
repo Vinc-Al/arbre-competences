@@ -1802,60 +1802,51 @@ function buildLayout(skills){
    Réutilise buildBrancheGraph, renderIcon, openPanel, le canvas
    #tree-canvas et son zoom/pan — seul le calcul de position change.
    ========================================================= */
-const GAL = { NODE_D: 64, A_MARGIN: 26, RING_GAP: 46, MIN_R0: 95 };
+const GAL = {
+  NODE_D: 64,        // diamètre d'un nœud
+  A_MARGIN: 26,      // marge mini entre deux nœuds voisins d'un même anneau
+  RING_GAP: 46,      // écart mini entre deux anneaux
+  MIN_R0: 95,        // rayon minimal du 1er anneau
+  PITCH_MAX: 0.60,   // écart angulaire MAX entre deux feuilles voisines (~34°)
+  SECTOR_MAX: 4.19,  // ouverture angulaire MAX de l'éventail (~240°) → laisse un vide, pas de tour complet
+  REF: -Math.PI/2,   // l'éventail s'ouvre vers le HAUT
+};
 
 function galaxyLayout(skills){
   const STEP = GAL.NODE_D + GAL.RING_GAP;
-
-  // 1) Rayon par tier : R0 auto pour garantir l'espace angulaire sur CHAQUE anneau
-  const tierCount = {};
-  skills.forEach(s => { const t = +s.niveau || 0; tierCount[t] = (tierCount[t]||0) + 1; });
-  let R0 = GAL.MIN_R0;
-  Object.keys(tierCount).forEach(t => {
-    t = +t;
-    const need = tierCount[t] * (GAL.NODE_D + GAL.A_MARGIN) / (2*Math.PI) - t*STEP;
-    if(need > R0) R0 = need;
-  });
-  const Rtier = t => R0 + (+t||0) * STEP;
-
-  // 2) Graphe de NŒUDS (et non de branches) : chaque nœud connaît ses enfants.
-  //    C'est ce qui permet aux frères d'un même tier de s'éventailler.
-  const byId = {};
-  skills.forEach(s => { byId[s.id] = s; });
+  const byId = {}; skills.forEach(s => byId[s.id] = s);
   const parseParents = pid => String(pid||'').split(',').map(x=>x.trim()).filter(Boolean);
-  // parent "de structure" = 1er parent existant ; les autres = liens de convergence
   const firstParent = s => { const ps = parseParents(s.parent_id).filter(p => byId[p]); return ps[0] || null; };
   const children = {};
   skills.forEach(s => { const p = firstParent(s); if(p){ (children[p] = children[p] || []).push(s.id); } });
   const roots = skills.filter(s => !firstParent(s)).map(s => s.id);
 
-  // 3) Layout radial : chaque nœud reçoit un secteur angulaire proportionnel à
-  //    son nombre de feuilles ; ses enfants se répartissent dedans (éventail).
-  const leafMemo = {};
-  function leaves(id){
-    if(leafMemo[id] != null) return leafMemo[id];
+  // 1) Ordre des FEUILLES (DFS) : une feuille = perk sans enfant. Les feuilles
+  //    d'un même sous-arbre restent contiguës → chaque bras occupe un secteur.
+  const leafList = [];
+  function collectLeaves(id){
     const ch = children[id] || [];
-    return leafMemo[id] = ch.length ? ch.reduce((a,c)=>a+leaves(c), 0) : 1;
+    if(!ch.length){ leafList.push(id); return; }
+    ch.forEach(collectLeaves);
   }
+  roots.forEach(collectLeaves);
+  const Ln = leafList.length;
+
+  // 2) Angle des feuilles : pas angulaire borné → l'ensemble tient dans un secteur
+  const pitch = Ln > 1 ? Math.min(GAL.PITCH_MAX, GAL.SECTOR_MAX / (Ln - 1)) : 0;
   const angle = {};
-  function allocate(id, a0, a1){
+  leafList.forEach((id, i) => { angle[id] = GAL.REF + (i - (Ln - 1)/2) * pitch; });
+
+  // 3) Angle d'un parent = BISSECTRICE de l'étendue de ses enfants (tier extérieur)
+  function setAngle(id){
     const ch = children[id] || [];
-    if(!ch.length){ angle[id] = (a0 + a1) / 2; return; }
-    const total = ch.reduce((a,c)=>a+leaves(c), 0);
-    let cur = a0;
-    ch.forEach(c => { const w = (a1 - a0) * leaves(c) / total; allocate(c, cur, cur + w); cur += w; });
-    // le parent se centre sur l'étendue de ses enfants
+    if(!ch.length) return;
+    ch.forEach(setAngle);
     angle[id] = (angle[ch[0]] + angle[ch[ch.length-1]]) / 2;
   }
-  const totalLeaves = roots.reduce((a,r)=>a+leaves(r), 0) || 1;
-  let cur = -Math.PI/2;                          // premier bras vers le haut
-  roots.forEach(r => {
-    const w = 2*Math.PI * leaves(r) / totalLeaves;
-    allocate(r, cur, cur + w);
-    cur += w;
-  });
+  roots.forEach(setAngle);
 
-  // 4) Convergence : un nœud à plusieurs parents se recentre sur leur bissectrice
+  // 4) Convergence : nœud à plusieurs parents → bissectrice de leurs angles
   skills.forEach(s => {
     const ps = parseParents(s.parent_id).filter(p => angle[p] != null);
     if(ps.length >= 2){
@@ -1865,15 +1856,32 @@ function galaxyLayout(skills){
     }
   });
 
-  // 5) Positions polaires
-  const Rmax = Rtier(Math.max(0, ...Object.keys(tierCount).map(Number)));
+  // 5) Rayon ADAPTATIF par tier : chaque anneau est repoussé assez loin pour que
+  //    ses nœuds (à l'écart angulaire réel) ne se chevauchent pas, tout en
+  //    restant croissant (au moins STEP entre deux anneaux).
+  const nodesByTier = {};
+  skills.forEach(s => { const t = +s.niveau||0; (nodesByTier[t] = nodesByTier[t]||[]).push(s.id); });
+  const tiers = Object.keys(nodesByTier).map(Number).sort((a,b)=>a-b);
+  const Rt = {}; let prev = 0;
+  tiers.forEach((t, idx) => {
+    const angs = nodesByTier[t].map(id => angle[id]).sort((a,b)=>a-b);
+    let minGap = Infinity;
+    for(let i=1;i<angs.length;i++) minGap = Math.min(minGap, angs[i]-angs[i-1]);
+    const needArc = (minGap < Infinity && minGap > 1e-4) ? (GAL.NODE_D + GAL.A_MARGIN) / minGap : 0;
+    let r = Math.max(GAL.MIN_R0, needArc);
+    if(idx > 0) r = Math.max(r, prev + STEP);
+    Rt[t] = r; prev = r;
+  });
+  const Rtier = t => Rt[+t||0] ?? (GAL.MIN_R0 + (+t||0)*STEP);
+
+  // 6) Positions polaires
+  const Rmax = Math.max(GAL.MIN_R0, ...Object.values(Rt));
   const CX = Rmax + 120, CY = Rmax + 120;
   const pos = {};
   skills.forEach(s => {
-    const R = Rtier(s.niveau), a = angle[s.id] ?? -Math.PI/2;
+    const R = Rtier(s.niveau), a = angle[s.id] ?? GAL.REF;
     pos[s.id] = { x: CX + R*Math.cos(a), y: CY + R*Math.sin(a), r: R, a };
   });
-  const tiers = Object.keys(tierCount).map(Number).sort((x,y)=>x-y);
   return { pos, CX, CY, Rmax, Rtier, tiers, roots, parseParents };
 }
 
