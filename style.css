@@ -931,3 +931,12 @@
 /* Mise en forme étendue dans les fiches (sorts / éléments / martial) */
 .panel-body u, #glossary-pop .gp-def u{ text-decoration-color:var(--gold, #d4af6a); text-underline-offset:2px; }
 .panel-body em, #glossary-pop .gp-def em{ color:var(--gold-bright, #e8c987); font-style:italic; }
+
+/* ── Mode MARTIAL : nœuds carrés (le rond reste réservé aux sorts) ──────────── */
+/* Même moteur d'arbre pour les deux domaines ; seule la forme distingue. */
+body.mode-martial .node{ border-radius:12px; }
+body.mode-martial .node.root,
+body.mode-martial .node.school-root{ border-radius:14px; }
+body.mode-martial .node .node-icon-img,
+body.mode-martial .node-icon-img{ border-radius:8px; }
+/* le halo/scale au survol reste géré par .node:hover, indépendant de la forme */

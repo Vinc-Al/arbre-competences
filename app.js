@@ -2672,6 +2672,10 @@ document.getElementById('zoom-reset').addEventListener('click', () => {
 })();
 
 async function init(){
+  // Forme des nœuds selon le domaine : carrés en martial, ronds en magie
+  if(typeof APP_MODE !== 'undefined' && APP_MODE === 'martial'){
+    document.body.classList.add('mode-martial');
+  }
   await loadData();
   await loadGlossary();
   recomputeAvailability();   // disponibilité cohérente dès le chargement (règle ET des prérequis)
