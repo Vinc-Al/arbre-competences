@@ -1922,12 +1922,34 @@ function renderGalaxy(){
     svg.appendChild(p);
   }
 
+  // Lien de convergence : routage orthogonal polaire (sort au rayon de l'enfant
+  // puis longe l'anneau) — évite le long trait diagonal quand les deux parents
+  // fusionnés sont angulairement éloignés. Inspiré du routage de Stoneshard.
+  function convLine(from, to){
+    const rC = to.r;
+    const mx = L.CX + rC*Math.cos(from.a), my = L.CY + rC*Math.sin(from.a);
+    let da = to.a - from.a;
+    while(da > Math.PI) da -= 2*Math.PI;
+    while(da < -Math.PI) da += 2*Math.PI;
+    const sweep = da > 0 ? 1 : 0;
+    const p = document.createElementNS(NS,'path');
+    p.setAttribute('d', `M ${from.x} ${from.y} L ${mx} ${my} A ${rC} ${rC} 0 0 ${sweep} ${to.x} ${to.y}`);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke', theme.color);
+    p.setAttribute('stroke-width','2');
+    p.setAttribute('opacity','0.5');
+    svg.appendChild(p);
+  }
+
   // Liens d'héritage : chaque nœud vers son (ses) parent(s)
   skills.forEach(s => {
     const to = L.pos[s.id]; if(!to) return;
     const ps = L.parseParents(s.parent_id).filter(p => L.pos[p]);
-    if(ps.length){
-      ps.forEach((p,i) => line(L.pos[p].x, L.pos[p].y, to.x, to.y, i>0));
+    if(ps.length >= 2){
+      // fusion : tous les liens du nœud routés le long de l'anneau (cohérence)
+      ps.forEach(p => convLine(L.pos[p], to));
+    } else if(ps.length === 1){
+      line(L.pos[ps[0]].x, L.pos[ps[0]].y, to.x, to.y, false);
     } else {
       // nœud racine d'un bras (T0) → relié au centre
       line(L.CX, L.CY, to.x, to.y, false);
