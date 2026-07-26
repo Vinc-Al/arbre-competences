@@ -940,3 +940,24 @@ body.mode-martial .node.school-root{ border-radius:14px; }
 body.mode-martial .node .node-icon-img,
 body.mode-martial .node-icon-img{ border-radius:8px; }
 /* le halo/scale au survol reste géré par .node:hover, indépendant de la forme */
+
+/* ── Traçage des dépendances au survol : "avant" (prérequis) / "après" (débloque) ── */
+#tree-canvas.focus-mode .node{ opacity:0.25; transition:opacity .12s ease; }
+#tree-canvas.focus-mode #links path{ opacity:0.10 !important; transition:opacity .12s ease; }
+
+#tree-canvas.focus-mode .node.hl-self{ opacity:1; }
+#tree-canvas.focus-mode .node.hl-avant{
+  opacity:1; border-color:#6fa8ff !important;
+  box-shadow:0 0 18px rgba(111,168,255,0.55) !important;
+}
+#tree-canvas.focus-mode .node.hl-apres{
+  opacity:1; border-color:var(--gold, #d4af6a) !important;
+  box-shadow:0 0 18px rgba(212,175,106,0.55) !important;
+}
+/* Liens : bleu = vient d'un prérequis (avant), or = mène à (après) */
+#tree-canvas.focus-mode #links path.lk-avant{
+  stroke:#6fa8ff !important; opacity:1 !important; stroke-width:3 !important; stroke-dasharray:none !important;
+}
+#tree-canvas.focus-mode #links path.lk-apres{
+  stroke:var(--gold, #d4af6a) !important; opacity:1 !important; stroke-width:3 !important; stroke-dasharray:none !important;
+}

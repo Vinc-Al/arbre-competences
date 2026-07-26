@@ -1986,6 +1986,60 @@ function renderGalaxy(){
   updatePointsDisplay(skills);
 }
 
+/* Survol d'un perk : met en évidence ses liens "avant" (prérequis, en bleu) et
+   "après" (ce qu'il débloque, en or), et estompe le reste. Marche pour les deux
+   arbres (sorts et martial) puisqu'ils partagent renderTree. */
+function wireDependencyHighlight(skills){
+  const canvas = document.getElementById('tree-canvas');
+  const paths = [...canvas.querySelectorAll('#links path[data-from][data-to]')];
+  const nodeById = {};
+  canvas.querySelectorAll('.node[data-id]').forEach(n => nodeById[n.dataset.id] = n);
+
+  // Relations LOGIQUES (et non les liens dessinés) :
+  //   avant = prérequis → parent_id ("a,b,c" = tous), sinon prédécesseur de branche
+  //   après = ce que le perk débloque → les nœuds qui le citent en parent
+  const byId = {}; skills.forEach(s => byId[s.id] = s);
+  const byBr = {};
+  skills.forEach(s => { (byBr[s.branche] = byBr[s.branche] || []).push(s); });
+  Object.values(byBr).forEach(l => l.sort((a,b)=>(+a.niveau||0)-(+b.niveau||0)));
+  const avant = {}, apres = {};
+  skills.forEach(s => {
+    let ps = String(s.parent_id||'').split(',').map(x=>x.trim()).filter(p => byId[p]);
+    if(!ps.length){
+      const l = byBr[s.branche] || []; const i = l.indexOf(s);
+      if(i > 0) ps = [l[i-1].id];      // chaîne linéaire : prédécesseur de tier
+    }
+    avant[s.id] = ps;
+    ps.forEach(p => { (apres[p] = apres[p] || []).push(s.id); });
+  });
+
+  function focus(id){
+    canvas.classList.add('focus-mode');
+    if(nodeById[id]) nodeById[id].classList.add('hl-self');
+    const av = avant[id] || [], ap = apres[id] || [];
+    av.forEach(p => nodeById[p] && nodeById[p].classList.add('hl-avant'));
+    ap.forEach(c => nodeById[c] && nodeById[c].classList.add('hl-apres'));
+    // allume les liens dessinés qui relient le nœud à un voisin logique
+    paths.forEach(p => {
+      const a = p.dataset.from, b = p.dataset.to;
+      const other = a === id ? b : (b === id ? a : null);
+      if(other === null) return;
+      if(av.includes(other)) p.classList.add('lk-avant');
+      if(ap.includes(other)) p.classList.add('lk-apres');
+    });
+  }
+  function clear(){
+    canvas.classList.remove('focus-mode');
+    canvas.querySelectorAll('.hl-self,.hl-avant,.hl-apres')
+      .forEach(e => e.classList.remove('hl-self','hl-avant','hl-apres'));
+    paths.forEach(p => p.classList.remove('lk-avant','lk-apres'));
+  }
+  Object.values(nodeById).forEach(n => {
+    n.addEventListener('mouseenter', () => focus(n.dataset.id));
+    n.addEventListener('mouseleave', clear);
+  });
+}
+
 
 function renderTree(){
   if(typeof galaxyMode !== 'undefined' && galaxyMode){ renderGalaxy(); return; }
@@ -2026,7 +2080,7 @@ function renderTree(){
 
   const theme = schoolTheme(currentSchool);
 
-  function drawLink(from, to, dashed){
+  function drawLink(from, to, dashed, fromId, toId){
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     let d;
     if(dashed){
@@ -2056,6 +2110,8 @@ function renderTree(){
     path.setAttribute('stroke-width', dashed ? '1.5' : '2');
     path.setAttribute('opacity', dashed ? '0.55' : '0.7');
     if(dashed) path.setAttribute('stroke-dasharray', '5 4');
+    if(fromId) path.dataset.from = fromId;
+    if(toId) path.dataset.to = toId;
     svg.appendChild(path);
   }
 
@@ -2065,7 +2121,7 @@ function renderTree(){
     for(let i=0; i<list.length-1; i++){
       const from = positions[list[i].id];
       const to = positions[list[i+1].id];
-      if(from && to) drawLink(from, to, false);
+      if(from && to) drawLink(from, to, false, list[i].id, list[i+1].id);
     }
   });
 
@@ -2076,7 +2132,7 @@ function renderTree(){
     const from = positions[info.parentSkillId];
     const firstChildSkill = byBranche[brancheKey][0];
     const to = firstChildSkill && positions[firstChildSkill.id];
-    if(from && to) drawLink(from, to, true);
+    if(from && to) drawLink(from, to, true, info.parentSkillId, firstChildSkill.id);
   });
 
   // Liens de parents SUPPLÉMENTAIRES : cas d'un nœud convergent dont le
@@ -2086,7 +2142,7 @@ function renderTree(){
   extraParentLinks.forEach(({ childId, parentId }) => {
     const from = positions[parentId];
     const to = positions[childId];
-    if(from && to) drawLink(from, to, true);
+    if(from && to) drawLink(from, to, true, parentId, childId);
   });
   const rootDiv = document.createElement('div');
   rootDiv.className = 'node root school-root';
@@ -2113,6 +2169,7 @@ function renderTree(){
     const tierMax = playerProfile.tier_max !== undefined ? playerProfile.tier_max : 999;
     const tierBlocked = s.etat === 'available' && s.niveau > tierMax;
     div.className = 'node ' + (s.etat || 'locked') + ((budgetLocked||tierBlocked) ? ' budget-locked' : '');
+    div.dataset.id = s.id;
     div.style.left = pos.x + 'px';
     div.style.top = pos.y + 'px';
     div.style.transform = 'translate(-50%, -50%)';
@@ -2126,6 +2183,7 @@ function renderTree(){
     canvas.appendChild(div);
   });
 
+  wireDependencyHighlight(skills);
   updatePointsDisplay(skills);
 }
 
