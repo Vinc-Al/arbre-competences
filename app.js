@@ -1771,13 +1771,26 @@ function buildLayout(skills){
   }
   roots.forEach(assignX);
 
-  // Convergence : un nœud à plusieurs parents se recentre entre eux
+  // Convergence : les perks qui partagent le MÊME jeu de parents forment un
+  // groupe. La position "tidy" leur a déjà donné des X distincts (ils sont
+  // enfants du 1er parent) ; on décale simplement tout le groupe pour le centrer
+  // sur la MÉDIANE DE L'ÉTENDUE des parents (min+max)/2. Ainsi ils ne se
+  // superposent pas ET ils tombent bien sous leurs parents.
+  const convGroups = {};
   skills.forEach(s => {
     const ps = parseP(s.parent_id);
     if(ps.length >= 2){
-      const xs = ps.map(p => xslot[p]).filter(x => x != null);
-      if(xs.length) xslot[s.id] = xs.reduce((a,b)=>a+b,0)/xs.length;
+      const key = ps.slice().sort().join('|');
+      (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
     }
+  });
+  Object.values(convGroups).forEach(({ ps, ids }) => {
+    const pxs = ps.map(p => xslot[p]).filter(x => x != null);
+    if(!pxs.length) return;
+    const target = (Math.min(...pxs) + Math.max(...pxs)) / 2;   // médiane de l'étendue
+    const cur = ids.reduce((a,id)=>a+(xslot[id]||0),0) / ids.length;
+    const shift = target - cur;
+    ids.forEach(id => { xslot[id] = (xslot[id] || 0) + shift; });
   });
 
   const positions = {};
