@@ -1728,65 +1728,67 @@ function buildBrancheGraph(skills){
   return { byBranche, brancheParent, childrenOf, rootBranches, extraParentLinks };
 }
 
+function buildHierarchy(skills){
+  const byId = {}; skills.forEach(s => byId[s.id] = s);
+  const parseP = pid => String(pid||'').split(',').map(x=>x.trim()).filter(p => byId[p]);
+  // nœuds d'une même branche, triés par niveau → sert de chaîne pour les sorts
+  // dont seuls les nœuds de fork portent un parent_id explicite.
+  const byBr = {};
+  skills.forEach(s => { (byBr[s.branche] = byBr[s.branche] || []).push(s); });
+  Object.values(byBr).forEach(l => l.sort((a,b)=>(+a.niveau||0)-(+b.niveau||0)));
+
+  const parentsOf = {}, firstParentOf = {}, childrenOf = {}, roots = [];
+  skills.forEach(s => {
+    let ps = parseP(s.parent_id);
+    if(!ps.length){                       // pas de parent_id → prédécesseur de branche
+      const l = byBr[s.branche] || []; const i = l.indexOf(s);
+      if(i > 0) ps = [l[i-1].id];
+    }
+    parentsOf[s.id] = ps;
+    firstParentOf[s.id] = ps[0] || null;
+    if(ps[0]) (childrenOf[ps[0]] = childrenOf[ps[0]] || []).push(s.id);
+    else roots.push(s.id);
+  });
+  return { byId, parseP, parentsOf, firstParentOf, childrenOf, roots };
+}
+
+// Layout ARBORESCENT : Y = niveau (tier), X = position "tidy" (les feuilles se
+// répartissent, un parent se centre sur ses enfants). Gère plusieurs perks au
+// MÊME niveau (ils reçoivent des X distincts) et la convergence (nœud centré
+// entre ses parents). Commun aux sorts et au martial.
 function buildLayout(skills){
-  const { byBranche, brancheParent, childrenOf, rootBranches } = buildBrancheGraph(skills);
+  const H = buildHierarchy(skills);
+  const { childrenOf, roots, parseP } = H;
 
-  const positions = {};
-  const brancheCol = {};
-  let nextCol = 0;
-
-  function assignCols(brancheKey){
-    brancheCol[brancheKey] = nextCol++;
-    (childrenOf[brancheKey] || []).forEach(child => assignCols(child));
+  // X "tidy" : chaque feuille prend un créneau, chaque parent se centre dessus
+  const xslot = {}; let cursor = 0;
+  function assignX(id){
+    const ch = (childrenOf[id] || []).slice()
+      .sort((a,b)=>(+H.byId[a].niveau||0)-(+H.byId[b].niveau||0)); // ordre stable
+    if(!ch.length){ xslot[id] = cursor++; return; }
+    ch.forEach(assignX);
+    xslot[id] = (xslot[ch[0]] + xslot[ch[ch.length-1]]) / 2;
   }
-  rootBranches.forEach(k => assignCols(k));
+  roots.forEach(assignX);
 
-  // Tier absolu = suffixe numérique de l'ID
-  function tierFromId(id){
-    const match = (id || '').match(/(\d+)$/);
-    return match ? parseInt(match[1], 10) : 0;
-  }
-
-  // Pour les branches fork : calculer un offset automatique basé sur le parent_id.
-  // Si Canalisation (evo_can_1, tier_id=1) fork depuis evo_nova_2 (tier_id=2),
-  // alors offset = 2 - 1 + 1 = 2, et evo_can_1 se place au tier 1+2 = 3.
-  // Pour les branches racines, offset = 0.
-  const brancheOffset = {};
-  function computeOffset(brancheKey){
-    if(brancheOffset[brancheKey] !== undefined) return brancheOffset[brancheKey];
-    const info = brancheParent[brancheKey];
-    if(!info){ brancheOffset[brancheKey] = 0; return 0; }
-
-    // Tier du nœud parent (dans sa propre branche, avec son propre offset)
-    const parentOffset = computeOffset(info.parentBranche);
-    const parentTier = tierFromId(info.parentSkillId) + parentOffset;
-
-    // Tier minimum des nœuds de CETTE branche fork (le premier nœud)
-    const list = byBranche[brancheKey] || [];
-    const minTier = Math.min(...list.map(s => tierFromId(s.id)));
-
-    // L'offset fait démarrer le premier nœud au tier du parent + 1
-    // (sauf si les IDs encodent déjà le bon tier absolu)
-    const offset = Math.max(0, parentTier + 1 - minTier);
-    brancheOffset[brancheKey] = offset;
-    return offset;
-  }
-  Object.keys(byBranche).forEach(k => computeOffset(k));
-
-  // Placer les nœuds : X = colonne (branche), Y = tier (ID suffix + offset)
-  Object.keys(byBranche).forEach(brancheKey => {
-    const col = brancheCol[brancheKey];
-    const offset = brancheOffset[brancheKey];
-    byBranche[brancheKey].forEach(s => {
-      const tier = tierFromId(s.id) + offset;
-      positions[s.id] = {
-        x: LEFT_PADDING + col * COL_GAP,
-        y: TOP_PADDING + T0_GAP + tier * ROW_GAP,
-        brancheKey, col, tier,
-      };
-    });
+  // Convergence : un nœud à plusieurs parents se recentre entre eux
+  skills.forEach(s => {
+    const ps = parseP(s.parent_id);
+    if(ps.length >= 2){
+      const xs = ps.map(p => xslot[p]).filter(x => x != null);
+      if(xs.length) xslot[s.id] = xs.reduce((a,b)=>a+b,0)/xs.length;
+    }
   });
 
+  const positions = {};
+  skills.forEach(s => {
+    const tier = +s.niveau || 0;
+    positions[s.id] = {
+      x: LEFT_PADDING + (xslot[s.id] || 0) * COL_GAP,
+      y: TOP_PADDING + T0_GAP + tier * ROW_GAP,
+      tier,
+    };
+  });
   return positions;
 }
 
@@ -2063,11 +2065,11 @@ function renderTree(){
   });
 
   // Root "school" node sits above all root branches, horizontally centred.
-  // Nœud école racine : en HAUT, centré horizontalement sur toutes les branches
-  const rootXs = rootBranches.map(k => {
-    const first = byBranche[k][0];
-    return first && positions[first.id] ? positions[first.id].x : null;
-  }).filter(x => x !== null);
+  // Nœud école racine : en HAUT, centré horizontalement sur les racines
+  const H = buildHierarchy(skills);
+  const rootXs = H.roots
+    .map(id => positions[id] ? positions[id].x : null)
+    .filter(x => x !== null);
   const rootX = rootXs.length ? (Math.min(...rootXs) + Math.max(...rootXs)) / 2 : LEFT_PADDING;
   const rootY = TOP_PADDING - 60;
 
@@ -2083,26 +2085,22 @@ function renderTree(){
   function drawLink(from, to, dashed, fromId, toId){
     const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     let d;
-    if(dashed){
-      // Fork : coude en L élégant.
-      // Si le nœud enfant est sur la même rangée Y (même tier) : ligne horizontale droite.
-      // Sinon : sortir horizontalement du parent, puis descendre/monter verticalement vers l'enfant.
-      if(Math.abs(from.y - to.y) < 5){
-        // Même tier → ligne horizontale
-        d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-      } else {
-        // Coude : horizontal depuis le parent jusqu'à la colonne du child, puis vertical
-        const cornerX = to.x;
-        const cornerY = from.y;
-        const r = 12; // rayon de l'arrondi
-        const dirX = to.x > from.x ? 1 : -1;
-        const dirY = to.y > from.y ? 1 : -1;
-        // Ligne horizontale → arrondi → ligne verticale
-        d = `M ${from.x} ${from.y} L ${cornerX - dirX*r} ${cornerY} Q ${cornerX} ${cornerY} ${cornerX} ${cornerY + dirY*r} L ${to.x} ${to.y}`;
-      }
-    } else {
-      // Intra-branche : ligne droite verticale
+    if(Math.abs(from.x - to.x) < 1){
+      // même colonne → trait vertical droit
       d = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    } else {
+      // coude orthogonal : vertical à mi-hauteur, traversée, puis vertical
+      // (angles arrondis pour un rendu propre type arbre de talents)
+      const midY = (from.y + to.y) / 2;
+      const r = 10;
+      const dirX = to.x > from.x ? 1 : -1;
+      const dirY = to.y > from.y ? 1 : -1;
+      d = `M ${from.x} ${from.y}`
+        + ` L ${from.x} ${midY - dirY*r}`
+        + ` Q ${from.x} ${midY} ${from.x + dirX*r} ${midY}`
+        + ` L ${to.x - dirX*r} ${midY}`
+        + ` Q ${to.x} ${midY} ${to.x} ${midY + dirY*r}`
+        + ` L ${to.x} ${to.y}`;
     }
     path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
@@ -2115,34 +2113,15 @@ function renderTree(){
     svg.appendChild(path);
   }
 
-  // Links within each branche: consecutive tier nodes connected vertically
-  Object.keys(byBranche).forEach(brancheKey => {
-    const list = byBranche[brancheKey];
-    for(let i=0; i<list.length-1; i++){
-      const from = positions[list[i].id];
-      const to = positions[list[i+1].id];
-      if(from && to) drawLink(from, to, false, list[i].id, list[i+1].id);
-    }
-  });
-
-  // Fork links (dashed bezier) from parent skill to child branch's first node
-  Object.keys(brancheParent).forEach(brancheKey => {
-    const info = brancheParent[brancheKey];
-    if(!info) return;
-    const from = positions[info.parentSkillId];
-    const firstChildSkill = byBranche[brancheKey][0];
-    const to = firstChildSkill && positions[firstChildSkill.id];
-    if(from && to) drawLink(from, to, true, info.parentSkillId, firstChildSkill.id);
-  });
-
-  // Liens de parents SUPPLÉMENTAIRES : cas d'un nœud convergent dont le
-  // parent_id liste plusieurs parents (ex. un capstone atteignable depuis
-  // deux branches). Le 1er parent a déjà tracé le fork ci-dessus ; on ajoute
-  // ici les liens vers les parents restants, dans le même style pointillé.
-  extraParentLinks.forEach(({ childId, parentId }) => {
-    const from = positions[parentId];
-    const to = positions[childId];
-    if(from && to) drawLink(from, to, true, parentId, childId);
+  // Liens = hiérarchie réelle : chaque nœud vers TOUS ses parents (parent_id,
+  // ou prédécesseur de branche pour les chaînes linéaires). C'est ce qui étale
+  // correctement plusieurs perks d'un même niveau et gère la convergence.
+  skills.forEach(s => {
+    const to = positions[s.id]; if(!to) return;
+    (H.parentsOf[s.id] || []).forEach(pid => {
+      const from = positions[pid];
+      if(from) drawLink(from, to, false, pid, s.id);
+    });
   });
   const rootDiv = document.createElement('div');
   rootDiv.className = 'node root school-root';
@@ -2154,9 +2133,8 @@ function renderTree(){
   rootDiv.innerHTML = `<span class="icon" style="filter:none;">✦</span>`;
   canvas.appendChild(rootDiv);
 
-  rootBranches.forEach(brancheKey => {
-    const firstSkill = byBranche[brancheKey][0];
-    const to = positions[firstSkill.id];
+  H.roots.forEach(id => {
+    const to = positions[id];
     if(to) drawLink({x: rootX, y: rootY}, to, false);
   });
 
