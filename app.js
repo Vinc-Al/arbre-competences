@@ -1758,40 +1758,65 @@ function buildHierarchy(skills){
 // entre ses parents). Commun aux sorts et au martial.
 function buildLayout(skills){
   const H = buildHierarchy(skills);
-  const { childrenOf, roots, parseP } = H;
+  const { parseP, firstParentOf, byId } = H;
+  const isConv = id => (H.parentsOf[id] || []).length >= 2;
 
-  // X "tidy" : chaque feuille prend un créneau, chaque parent se centre dessus
+  // Arbre PRIMAIRE : enfants par 1er parent, en EXCLUANT les nœuds convergents.
+  // (Un convergent ne doit pas tirer le barycentre de son parent : il est posé
+  //  à part, entre ses parents.)
+  const primChildren = {}, primRoots = [];
+  skills.forEach(s => {
+    if(isConv(s.id)) return;
+    const p = firstParentOf[s.id];
+    if(p) (primChildren[p] = primChildren[p] || []).push(s.id);
+    else primRoots.push(s.id);
+  });
+
+  // X : chaque feuille prend un créneau ; chaque parent va au BARYCENTRE de ses
+  // enfants (moyenne de TOUS, pas seulement 1er/dernier) → arbre équilibré.
   const xslot = {}; let cursor = 0;
   function assignX(id){
-    const ch = (childrenOf[id] || []).slice()
-      .sort((a,b)=>(+H.byId[a].niveau||0)-(+H.byId[b].niveau||0)); // ordre stable
+    const ch = (primChildren[id] || []).slice()
+      .sort((a,b)=>(+byId[a].niveau||0)-(+byId[b].niveau||0));
     if(!ch.length){ xslot[id] = cursor++; return; }
     ch.forEach(assignX);
-    xslot[id] = (xslot[ch[0]] + xslot[ch[ch.length-1]]) / 2;
+    xslot[id] = ch.reduce((a,c)=>a + xslot[c], 0) / ch.length;
   }
-  roots.forEach(assignX);
+  primRoots.forEach(assignX);
 
-  // Convergence : les perks qui partagent le MÊME jeu de parents forment un
-  // groupe. La position "tidy" leur a déjà donné des X distincts (ils sont
-  // enfants du 1er parent) ; on décale simplement tout le groupe pour le centrer
-  // sur la MÉDIANE DE L'ÉTENDUE des parents (min+max)/2. Ainsi ils ne se
-  // superposent pas ET ils tombent bien sous leurs parents.
+  // Nœuds CONVERGENTS : groupés par jeu de parents, étalés autour de la médiane
+  // de l'étendue de leurs parents (min+max)/2. Placés APRÈS l'arbre primaire.
   const convGroups = {};
   skills.forEach(s => {
+    if(!isConv(s.id)) return;
     const ps = parseP(s.parent_id);
-    if(ps.length >= 2){
-      const key = ps.slice().sort().join('|');
-      (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
-    }
+    const key = ps.slice().sort().join('|');
+    (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
   });
   Object.values(convGroups).forEach(({ ps, ids }) => {
     const pxs = ps.map(p => xslot[p]).filter(x => x != null);
-    if(!pxs.length) return;
-    const target = (Math.min(...pxs) + Math.max(...pxs)) / 2;   // médiane de l'étendue
-    const cur = ids.reduce((a,id)=>a+(xslot[id]||0),0) / ids.length;
-    const shift = target - cur;
-    ids.forEach(id => { xslot[id] = (xslot[id] || 0) + shift; });
+    if(!pxs.length){ ids.forEach(id => xslot[id] = cursor++); return; }
+    const center = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+    const n = ids.length;
+    ids.forEach((id, i) => { xslot[id] = center + (i - (n-1)/2); });  // étalés d'1 créneau
   });
+
+  // Filet de sécurité : tout nœud non encore positionné (ex. enfant d'un
+  // convergent) se cale sous son 1er parent.
+  skills.forEach(s => {
+    if(xslot[s.id] == null){
+      const p = firstParentOf[s.id];
+      xslot[s.id] = (p != null && xslot[p] != null) ? xslot[p] : cursor++;
+    }
+  });
+
+  // Normalisation dynamique : on décale tout pour que le nœud le plus à gauche
+  // soit à 0 (les convergents étalés peuvent sortir vers la gauche).
+  const allX = skills.map(s => xslot[s.id]).filter(x => x != null);
+  if(allX.length){
+    const minX = Math.min(...allX);
+    skills.forEach(s => { xslot[s.id] -= minX; });
+  }
 
   const positions = {};
   skills.forEach(s => {
