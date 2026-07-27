@@ -1740,9 +1740,18 @@ function buildHierarchy(skills){
   const parentsOf = {}, firstParentOf = {}, childrenOf = {}, roots = [];
   skills.forEach(s => {
     let ps = parseP(s.parent_id);
-    if(!ps.length){                       // pas de parent_id → prédécesseur de branche
-      const l = byBr[s.branche] || []; const i = l.indexOf(s);
-      if(i > 0) ps = [l[i-1].id];
+    if(!ps.length){
+      // Pas de parent_id explicite. Repli pour les chaînes linéaires (sorts) :
+      //  - niveau 0 → c'est une RACINE (jamais rattachée).
+      //  - niveau > 0 → prédécesseur = le nœud au niveau-1 de la MÊME branche,
+      //    à condition qu'il soit UNIQUE (sinon on ne devine pas → racine).
+      //    Ça évite d'enchaîner à tort plusieurs armes rangées dans une même
+      //    section (ex. Épée + Claymore dans "EPEE").
+      const tier = +s.niveau || 0;
+      if(tier > 0){
+        const preds = (byBr[s.branche] || []).filter(x => (+x.niveau||0) === tier - 1);
+        if(preds.length === 1) ps = [preds[0].id];
+      }
     }
     parentsOf[s.id] = ps;
     firstParentOf[s.id] = ps[0] || null;
@@ -1772,17 +1781,23 @@ function buildLayout(skills){
     else primRoots.push(s.id);
   });
 
-  // X : chaque feuille prend un créneau ; chaque parent va au BARYCENTRE de ses
-  // enfants (moyenne de TOUS, pas seulement 1er/dernier) → arbre équilibré.
+  // X : chaque feuille prend une colonne ; chaque nœud se place au CENTRE de
+  // l'ÉTENDUE EN COLONNES de son sous-arbre (colonne min ↔ colonne max). C'est
+  // le vrai centre visuel — un parent est pile au milieu de la largeur qu'il
+  // couvre, quelle que soit la répartition de ses enfants.
   const xslot = {}; let cursor = 0;
   function assignX(id){
     const ch = (primChildren[id] || []).slice()
       .sort((a,b)=>(+byId[a].niveau||0)-(+byId[b].niveau||0));
-    if(!ch.length){ xslot[id] = cursor++; return; }
-    ch.forEach(assignX);
-    xslot[id] = ch.reduce((a,c)=>a + xslot[c], 0) / ch.length;
+    if(!ch.length){ const c = cursor++; xslot[id] = c; return { min: c, max: c }; }
+    let min = Infinity, max = -Infinity;
+    ch.forEach(c => { const r = assignX(c); if(r.min < min) min = r.min; if(r.max > max) max = r.max; });
+    xslot[id] = (min + max) / 2;
+    return { min, max };
   }
-  primRoots.forEach(assignX);
+  // Espace d'une colonne supplémentaire entre deux arbres racines → frontières
+  // graphiques nettes (chaque arme dans sa propre bande de colonnes).
+  primRoots.forEach((r, i) => { if(i > 0) cursor += 1; assignX(r); });
 
   // Nœuds CONVERGENTS : groupés par jeu de parents, étalés autour de la médiane
   // de l'étendue de leurs parents (min+max)/2. Placés APRÈS l'arbre primaire.
@@ -2103,12 +2118,11 @@ function renderTree(){
   });
 
   // Root "school" node sits above all root branches, horizontally centred.
-  // Nœud école racine : en HAUT, centré horizontalement sur les racines
+  // Nœud école racine ✦ : centré sur l'ÉTENDUE GLOBALE de l'arbre (et non sur
+  // la 1ère racine), pour qu'il soit correctement au milieu de tout.
   const H = buildHierarchy(skills);
-  const rootXs = H.roots
-    .map(id => positions[id] ? positions[id].x : null)
-    .filter(x => x !== null);
-  const rootX = rootXs.length ? (Math.min(...rootXs) + Math.max(...rootXs)) / 2 : LEFT_PADDING;
+  const allX = Object.values(positions).map(p => p.x);
+  const rootX = allX.length ? (Math.min(...allX) + Math.max(...allX)) / 2 : LEFT_PADDING;
   const rootY = TOP_PADDING - 60;
 
   const canvasW = maxX + 180;
