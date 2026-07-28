@@ -1781,19 +1781,17 @@ function buildLayout(skills){
     else primRoots.push(s.id);
   });
 
-  // X : chaque feuille prend une colonne ; chaque nœud se place au CENTRE de
-  // l'ÉTENDUE EN COLONNES de son sous-arbre (colonne min ↔ colonne max). C'est
-  // le vrai centre visuel — un parent est pile au milieu de la largeur qu'il
-  // couvre, quelle que soit la répartition de ses enfants.
+  // X : chaque feuille prend une colonne. Chaque nœud se place RÉCURSIVEMENT au
+  // milieu de son PREMIER et son DERNIER enfant (chaque enfant étant déjà le
+  // centre de son propre sous-arbre). Ainsi un nœud à 2 sous-branches tombe pile
+  // entre elles, sans être tiré vers la plus large.
   const xslot = {}; let cursor = 0;
   function assignX(id){
     const ch = (primChildren[id] || []).slice()
       .sort((a,b)=>(+byId[a].niveau||0)-(+byId[b].niveau||0));
-    if(!ch.length){ const c = cursor++; xslot[id] = c; return { min: c, max: c }; }
-    let min = Infinity, max = -Infinity;
-    ch.forEach(c => { const r = assignX(c); if(r.min < min) min = r.min; if(r.max > max) max = r.max; });
-    xslot[id] = (min + max) / 2;
-    return { min, max };
+    if(!ch.length){ xslot[id] = cursor++; return; }
+    ch.forEach(assignX);
+    xslot[id] = (xslot[ch[0]] + xslot[ch[ch.length-1]]) / 2;
   }
   // Espace d'une colonne supplémentaire entre deux arbres racines → frontières
   // graphiques nettes (chaque arme dans sa propre bande de colonnes).
