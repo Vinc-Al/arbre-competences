@@ -1782,15 +1782,21 @@ function buildLayout(skills){
   });
 
   // X : chaque feuille prend une colonne. Chaque nœud se place RÉCURSIVEMENT au
-  // milieu de son PREMIER et son DERNIER enfant (chaque enfant étant déjà le
-  // centre de son propre sous-arbre). Ainsi un nœud à 2 sous-branches tombe pile
-  // entre elles, sans être tiré vers la plus large.
+  // milieu de son PREMIER et son DERNIER enfant. Entre deux frères, on insère un
+  // ÉCART UNIQUEMENT si au moins l'un des deux est un SOUS-ARBRE (a des enfants) :
+  // ainsi deux branches distinctes ne se touchent pas, mais des feuilles sœurs
+  // d'un même nœud restent bien groupées.
+  const SIBLING_GAP = 1;
   const xslot = {}; let cursor = 0;
+  const hasKids = id => (primChildren[id] || []).length > 0;
   function assignX(id){
     const ch = (primChildren[id] || []).slice()
       .sort((a,b)=>(+byId[a].niveau||0)-(+byId[b].niveau||0));
     if(!ch.length){ xslot[id] = cursor++; return; }
-    ch.forEach(assignX);
+    ch.forEach((c, i) => {
+      if(i > 0 && (hasKids(ch[i-1]) || hasKids(c))) cursor += SIBLING_GAP;
+      assignX(c);
+    });
     xslot[id] = (xslot[ch[0]] + xslot[ch[ch.length-1]]) / 2;
   }
   // Espace d'une colonne supplémentaire entre deux arbres racines → frontières
