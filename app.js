@@ -665,6 +665,25 @@ function schoolTheme(key){
 }
 
 function buildSchoolTabs(){
+  const tabsEl = document.getElementById('school-tabs');
+  // MODE MAÎTRISE : les éléments deviennent les onglets (même encart que les écoles)
+  if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
+    tabsEl.innerHTML = '';
+    masteryElements().forEach(el => {
+      const disp = el.charAt(0).toUpperCase() + el.slice(1);
+      const active = el === currentMasteryElement;
+      const col = '#d4af6a';
+      const tab = document.createElement('div');
+      tab.className = 'school-tab' + (active ? ' active' : '');
+      tab.style.borderBottomColor = active ? col : 'transparent';
+      tab.style.color = active ? col : '';
+      tab.innerHTML = `<span class="dot" style="background:${col}"></span>${disp}`;
+      tab.addEventListener('click', () => selectMasteryElement(el));
+      tabsEl.appendChild(tab);
+    });
+    return;
+  }
+
   const seen = new Set();
   schoolsOrder = [];
   allSkills.forEach(s => {
@@ -674,7 +693,6 @@ function buildSchoolTabs(){
     currentSchool = schoolsOrder[0] || null;
   }
 
-  const tabsEl = document.getElementById('school-tabs');
   tabsEl.innerHTML = '';
   schoolsOrder.forEach(key => {
     const theme = schoolTheme(key);
@@ -696,10 +714,30 @@ function buildSchoolTabs(){
 }
 
 function applySchoolTheme(){
+  if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
+    const disp = currentMasteryElement
+      ? currentMasteryElement.charAt(0).toUpperCase() + currentMasteryElement.slice(1)
+      : 'Maîtrise';
+    const t = document.getElementById('header-title');
+    t.textContent = 'Maîtrise — ' + disp;
+    t.style.color = '#d4af6a';
+    t.style.textShadow = '0 0 18px rgba(212,175,106,0.4)';
+    return;
+  }
   const theme = schoolTheme(currentSchool);
   document.getElementById('header-title').textContent = theme.label;
   document.getElementById('header-title').style.color = theme.color;
   document.getElementById('header-title').style.textShadow = `0 0 18px ${theme.glow}`;
+}
+
+// Sélectionne un élément de maîtrise (via onglet OU menu) et synchronise tout
+function selectMasteryElement(el){
+  currentMasteryElement = el;
+  buildSchoolTabs();
+  if(typeof renderMasteryDropdown === 'function') renderMasteryDropdown();
+  if(typeof updateMasteryLabel === 'function') updateMasteryLabel();
+  applySchoolTheme();
+  renderTree();
 }
 
 /* =========================================================
@@ -844,6 +882,8 @@ function toggleMasteryView(forceOpen){
   // revient au menu d'éléments radial classique quand on désactive.
   if(masteryViewOpen){ renderMasteryDropdown(); updateMasteryLabel(); }
   else { renderElementDropdown(); updateElementSelectLabel(); }
+  buildSchoolTabs();     // onglets = éléments (maîtrise) ou écoles (normal)
+  applySchoolTheme();    // titre reflète l'élément ou l'école
   renderTree();
 }
 
@@ -858,10 +898,7 @@ function renderMasteryDropdown(){
     const disp = el.charAt(0).toUpperCase() + el.slice(1);
     opt.innerHTML = `<span class="dot" style="background:var(--gold,#d4af6a)"></span><span>${disp}</span><span class="check">✓</span>`;
     opt.addEventListener('click', () => {
-      currentMasteryElement = el;
-      renderMasteryDropdown();
-      updateMasteryLabel();
-      renderTree();
+      selectMasteryElement(el);
       document.getElementById('element-dropdown').classList.remove('open');
     });
     dropdown.appendChild(opt);
