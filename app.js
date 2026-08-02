@@ -835,10 +835,42 @@ function effectAppliesToBranch(effect, brancheKey){
 
 function toggleMasteryView(forceOpen){
   masteryViewOpen = forceOpen !== undefined ? forceOpen : !masteryViewOpen;
-  document.getElementById('mastery-view').classList.toggle('open', masteryViewOpen);
-  document.getElementById('canvas-wrap').classList.toggle('hidden', masteryViewOpen);
+  masteryTreeMode = masteryViewOpen;
+  document.body.classList.toggle('mode-mastery', masteryViewOpen);
   document.getElementById('mastery-toggle-btn').classList.toggle('active', masteryViewOpen);
-  if(masteryViewOpen) renderMasteryView();
+  document.getElementById('mastery-view').classList.remove('open');
+  document.getElementById('canvas-wrap').classList.remove('hidden');
+  // Le menu "Éléments" devient un sélecteur simple d'élément de maîtrise, ou
+  // revient au menu d'éléments radial classique quand on désactive.
+  if(masteryViewOpen){ renderMasteryDropdown(); updateMasteryLabel(); }
+  else { renderElementDropdown(); updateElementSelectLabel(); }
+  renderTree();
+}
+
+// Menu déroulant : un élément de maîtrise à la fois (sélection simple)
+function renderMasteryDropdown(){
+  const dropdown = document.getElementById('element-dropdown');
+  if(!dropdown) return;
+  dropdown.innerHTML = '';
+  masteryElements().forEach(el => {
+    const opt = document.createElement('div');
+    opt.className = 'element-option' + (el === currentMasteryElement ? ' selected' : '');
+    const disp = el.charAt(0).toUpperCase() + el.slice(1);
+    opt.innerHTML = `<span class="dot" style="background:var(--gold,#d4af6a)"></span><span>${disp}</span><span class="check">✓</span>`;
+    opt.addEventListener('click', () => {
+      currentMasteryElement = el;
+      renderMasteryDropdown();
+      updateMasteryLabel();
+      renderTree();
+      document.getElementById('element-dropdown').classList.remove('open');
+    });
+    dropdown.appendChild(opt);
+  });
+}
+function updateMasteryLabel(){
+  const label = document.getElementById('element-select-label');
+  const disp = currentMasteryElement ? currentMasteryElement.charAt(0).toUpperCase()+currentMasteryElement.slice(1) : 'aucune';
+  if(label) label.textContent = 'Maîtrise : ' + disp;
 }
 document.getElementById('mastery-toggle-btn').addEventListener('click', () => toggleMasteryView());
 
@@ -1641,6 +1673,12 @@ function savePlayerChoices(){
 }
 
 function currentSkills(){
+  // Mode "arbre de maîtrise" (losanges) : on affiche l'élément sélectionné
+  if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
+    let m = masterySkills.filter(s => s.element === currentMasteryElement);
+    if(!isMjMode) m = m.filter(s => s.etat === 'unlocked' || s.etat === 'available');
+    return m;
+  }
   let skills = allSkills.filter(s => s.ecole === currentSchool);
   // Mode joueur : masquer les sorts verrouillés (seuls unlocked et available sont visibles)
   if(!isMjMode){
@@ -2629,6 +2667,24 @@ function buildFicheBody(d){
     .map(s => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${parseRichText(statVal(s))}</div>`)
     .join('');
 
+  // 1bis. Spécifique MAÎTRISE (le perk a un élément-racine) : école visée +
+  // famille de sorts affectée. Rendu via parseRichText → tu peux écrire
+  // [Trait Corrosif] (réf de sort) ou [[terme]] dans la colonne `sort`.
+  let masteryLines = '';
+  if(d.element){
+    const eco = val('ecole').trim();
+    if(eco){
+      const ecoDisp = eco.toLowerCase() === 'general' ? 'Générale'
+        : eco.charAt(0).toUpperCase() + eco.slice(1);
+      masteryLines += `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">École :</span> ${ecoDisp}</div>`;
+    }
+    const sort = (val('sort') || val('famille_sort') || val('sort_lie') || val('sorts')).trim();
+    if(sort){
+      masteryLines += `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">Famille de sorts affectée :</span> ${parseRichText(sort)}</div>`;
+    }
+  }
+  const allStatLines = statLines + masteryLines;
+
   // 2. Description (paragraphes + puces "→" du Sheet)
   const descHtml = buildDescriptionHtml(d.description);
 
@@ -2643,7 +2699,7 @@ function buildFicheBody(d){
 
   return {
     descHtml,
-    statsHtml: statLines ? `<div class="rank-stats">${statLines}</div>` : '',
+    statsHtml: allStatLines ? `<div class="rank-stats">${allStatLines}</div>` : '',
     specialHtml,
   };
 }
@@ -2763,12 +2819,61 @@ document.getElementById('zoom-reset').addEventListener('click', () => {
   });
 })();
 
+let masterySkills = [];
+let masteryTreeMode = false;
+let currentMasteryElement = null;
+
+// Tag chaque compétence de maîtrise avec son ÉLÉMENT = la racine dont elle
+// descend (branche de la racine). Sert au filtrage "un arbre par élément".
+function tagMasteryElements(){
+  const H = buildHierarchy(masterySkills);
+  const rootOf = {};
+  function findRoot(id){
+    if(rootOf[id]) return rootOf[id];
+    let cur = id, guard = 0;
+    while(H.firstParentOf[cur] && guard++ < 200) cur = H.firstParentOf[cur];
+    return rootOf[id] = cur;
+  }
+  masterySkills.forEach(s => {
+    const r = H.byId[findRoot(s.id)];
+    s.element = (r && (r.branche || r.nom)) || 'Maîtrise';
+  });
+  const els = [...new Set(masterySkills.map(s => s.element))];
+  if(!currentMasteryElement || !els.includes(currentMasteryElement)) currentMasteryElement = els[0] || null;
+}
+
+function masteryElements(){ return [...new Set(masterySkills.map(s => s.element))]; }
+
+// Charge la source "maîtrise" (format arbre) → affichée en losanges par le bouton Maîtrise
+async function loadMastery(){
+  const d = (typeof DATA_SHEETS !== 'undefined') ? DATA_SHEETS.maitrise : '';
+  let urls = Array.isArray(d) ? d : (d && typeof d === 'object' ? Object.values(d) : [d]);
+  urls = urls.map(u => (u||'').trim()).filter(Boolean);
+  if(!urls.length) return;
+  const results = await Promise.allSettled(urls.map(u => fetchCSV(u)));
+  masterySkills = [];
+  results.forEach(r => {
+    if(r.status === 'fulfilled') masterySkills = masterySkills.concat(r.value);
+    else console.warn('Maîtrise inaccessible :', r.reason && r.reason.message);
+  });
+  // Normalisation minimale (mêmes champs que les autres arbres).
+  // NB : on NE touche PAS à `ecole` — elle porte le tag général/école du perk.
+  // L'élément (Feu, Froid…) est déduit de la racine par tagMasteryElements.
+  masterySkills.forEach(s => {
+    s.niveau = +s.niveau || 0;
+    s.cout = +s.cout || 0;
+    if(!s.etat) s.etat = (String(s.accessible).toUpperCase() === 'OUI') ? 'available' : 'locked';
+  });
+  tagMasteryElements();
+}
+
 async function init(){
   // Forme des nœuds selon le domaine : carrés en martial, ronds en magie
   if(typeof APP_MODE !== 'undefined' && APP_MODE === 'martial'){
     document.body.classList.add('mode-martial');
   }
   await loadData();
+  await loadMastery();
   await loadGlossary();
   recomputeAvailability();   // disponibilité cohérente dès le chargement (règle ET des prérequis)
   buildSchoolTabs();

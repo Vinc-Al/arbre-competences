@@ -961,3 +961,26 @@ body.mode-martial .node-icon-img{ border-radius:8px; }
 #tree-canvas.focus-mode #links path.lk-apres{
   stroke:var(--gold, #d4af6a) !important; opacity:1 !important; stroke-width:3 !important; stroke-dasharray:none !important;
 }
+
+/* ── Mode MAÎTRISE : nœuds en LOSANGE (rond=sorts, carré=martial, losange=maîtrise) ── */
+/* Carré tourné à 45°. On surcharge le translate inline (rotate en plus), et on
+   contre-tourne l'icône pour qu'elle reste droite. */
+body.mode-mastery .node{
+  transform:translate(-50%,-50%) rotate(45deg) !important;
+  border-radius:12px;
+}
+body.mode-mastery .node:hover{
+  transform:translate(-50%,-50%) rotate(45deg) scale(1.12) !important;
+}
+body.mode-mastery .node.root,
+body.mode-mastery .node.school-root{
+  transform:translate(-50%,-50%) rotate(45deg) !important;
+  border-radius:14px;
+}
+body.mode-mastery .node .icon,
+body.mode-mastery .node .node-icon-img{
+  transform:rotate(-45deg);
+}
+body.mode-mastery .node .node-icon-img{ border-radius:8px; }
+/* le label reste droit et lisible sous le losange */
+body.mode-mastery .node .node-label{ transform:rotate(-45deg); }
