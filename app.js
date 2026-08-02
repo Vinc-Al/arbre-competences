@@ -661,6 +661,7 @@ function promptMjPassword(){
 }
 
 function schoolTheme(key){
+  if(!key) return { ...SCHOOL_THEMES.default };
   return SCHOOL_THEMES[key] || { ...SCHOOL_THEMES.default, label: key.charAt(0).toUpperCase() + key.slice(1) };
 }
 
@@ -2254,20 +2255,25 @@ function renderTree(){
       if(from) drawLink(from, to, false, pid, s.id);
     });
   });
-  const rootDiv = document.createElement('div');
-  rootDiv.className = 'node root school-root';
-  rootDiv.style.left = rootX + 'px';
-  rootDiv.style.top = rootY + 'px';
-  rootDiv.style.transform = 'translate(-50%, -50%)';
-  rootDiv.style.borderColor = theme.color;
-  rootDiv.style.boxShadow = `0 0 26px ${theme.glow}`;
-  rootDiv.innerHTML = `<span class="icon" style="filter:none;">✦</span>`;
-  canvas.appendChild(rootDiv);
+  // Nœud ✦ central + liens vers les racines — SAUF en mode maîtrise, où le T0
+  // de l'élément EST le noyau (pas de nœud supplémentaire au-dessus).
+  const showNucleus = !(typeof APP_MODE !== 'undefined' && APP_MODE === 'maitrise');
+  if(showNucleus){
+    const rootDiv = document.createElement('div');
+    rootDiv.className = 'node root school-root';
+    rootDiv.style.left = rootX + 'px';
+    rootDiv.style.top = rootY + 'px';
+    rootDiv.style.transform = 'translate(-50%, -50%)';
+    rootDiv.style.borderColor = theme.color;
+    rootDiv.style.boxShadow = `0 0 26px ${theme.glow}`;
+    rootDiv.innerHTML = `<span class="icon" style="filter:none;">✦</span>`;
+    canvas.appendChild(rootDiv);
 
-  H.roots.forEach(id => {
-    const to = positions[id];
-    if(to) drawLink({x: rootX, y: rootY}, to, false);
-  });
+    H.roots.forEach(id => {
+      const to = positions[id];
+      if(to) drawLink({x: rootX, y: rootY}, to, false);
+    });
+  }
 
   // draw nodes
   skills.forEach(s => {
@@ -2908,6 +2914,15 @@ async function init(){
   // Forme des nœuds selon le domaine : carrés en martial, ronds en magie
   if(typeof APP_MODE !== 'undefined' && APP_MODE === 'martial'){
     document.body.classList.add('mode-martial');
+  }
+  // Page dédiée MAÎTRISE : mode losange permanent, onglets = éléments,
+  // pas de bouton bascule ni de menu déroulant (remplacés par les onglets).
+  if(typeof APP_MODE !== 'undefined' && APP_MODE === 'maitrise'){
+    masteryTreeMode = true;
+    masteryViewOpen = true;
+    document.body.classList.add('mode-mastery');
+    const tb = document.getElementById('mastery-toggle-btn'); if(tb) tb.style.display = 'none';
+    const eb = document.getElementById('element-bar'); if(eb) eb.style.display = 'none';
   }
   await loadData();
   await loadMastery();

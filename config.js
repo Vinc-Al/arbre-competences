@@ -217,7 +217,7 @@ const DATA_SHEETS = {
   // Format ARBRE habituel (branche, id, parent_id, niveau, …), une section par
   // élément/archétype. Affiché en losanges quand le bouton "Maîtrise" est actif.
   // Accepte une URL ou une liste. À remplir quand ton onglet sera prêt.
-  maitrise:    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1138972133&single=true&output=csv",
+  maitrise:    "",
   combos:      "", // URL CSV de l'onglet "combos" du Sheet DATA
   master:      "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=0&single=true&output=csv", // URL CSV de l'onglet "Master" — ligne id=mj_password, valeur=votre_mot_de_passe
 
@@ -283,6 +283,12 @@ const galaxyMode = false;
 if(APP_MODE === 'martial'){
   DATA_SHEETS.competences = '';          // pas de sorts de magie sur la page martiale
   DATA_SHEETS.ecoles = DATA_SHEETS.martial;
+}
+// Page dédiée MAÎTRISE ÉLÉMENTAIRE : on ne charge que la source maîtrise.
+if(APP_MODE === 'maitrise'){
+  DATA_SHEETS.competences = '';
+  DATA_SHEETS.ecoles = {};
+  DATA_SHEETS.elements = '';
 }
 
 const PLAYER_SHEETS = {
