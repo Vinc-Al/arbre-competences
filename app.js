@@ -716,11 +716,8 @@ function buildSchoolTabs(){
 
 function applySchoolTheme(){
   if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
-    const disp = currentMasteryElement
-      ? currentMasteryElement.charAt(0).toUpperCase() + currentMasteryElement.slice(1)
-      : 'Maîtrise';
     const t = document.getElementById('header-title');
-    t.textContent = 'Maîtrise — ' + disp;
+    t.textContent = 'Maîtrise élémentaire';
     t.style.color = '#d4af6a';
     t.style.textShadow = '0 0 18px rgba(212,175,106,0.4)';
     return;
@@ -732,13 +729,27 @@ function applySchoolTheme(){
 }
 
 // Sélectionne un élément de maîtrise (via onglet OU menu) et synchronise tout
+// Onglet d'élément : ne filtre plus (tout est affiché) → recentre la vue sur
+// la racine T0 de l'élément choisi.
 function selectMasteryElement(el){
   currentMasteryElement = el;
-  buildSchoolTabs();
-  if(typeof renderMasteryDropdown === 'function') renderMasteryDropdown();
-  if(typeof updateMasteryLabel === 'function') updateMasteryLabel();
-  applySchoolTheme();
-  renderTree();
+  buildSchoolTabs();                 // met à jour l'onglet actif
+  const root = masterySkills.find(s => s.element === el && (+s.niveau || 0) === 0);
+  const wrap = document.getElementById('canvas-wrap');
+  if(root && wrap){
+    const node = document.querySelector(`.node[data-id="${root.id}"]`);
+    if(node){
+      const x = parseFloat(node.style.left) || 0;
+      const y = parseFloat(node.style.top) || 0;
+      const left = x - wrap.clientWidth / 2;
+      const top = Math.max(0, y - 120);
+      if(typeof wrap.scrollTo === 'function'){
+        wrap.scrollTo({ left, top, behavior: 'smooth' });
+      } else {
+        wrap.scrollLeft = left; wrap.scrollTop = top;
+      }
+    }
+  }
 }
 
 /* =========================================================
@@ -1711,9 +1722,10 @@ function savePlayerChoices(){
 }
 
 function currentSkills(){
-  // Mode "arbre de maîtrise" (losanges) : on affiche l'élément sélectionné
+  // Mode "arbre de maîtrise" (losanges) : TOUS les éléments sur une même page
+  // (plusieurs racines T0), comme martial affiche toutes les armes.
   if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
-    let m = masterySkills.filter(s => s.element === currentMasteryElement);
+    let m = masterySkills;
     if(!isMjMode) m = m.filter(s => s.etat === 'unlocked' || s.etat === 'available');
     return m;
   }
