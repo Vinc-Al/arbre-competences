@@ -1722,19 +1722,25 @@ function savePlayerChoices(){
 }
 
 function currentSkills(){
+  // Dédoublonnage par id : un id en double (erreur de saisie) ne doit pas
+  // consommer une colonne en trop ni casser la hiérarchie.
+  const dedupe = arr => {
+    const seen = new Set();
+    return arr.filter(s => { if(seen.has(s.id)) return false; seen.add(s.id); return true; });
+  };
   // Mode "arbre de maîtrise" (losanges) : TOUS les éléments sur une même page
   // (plusieurs racines T0), comme martial affiche toutes les armes.
   if(typeof masteryTreeMode !== 'undefined' && masteryTreeMode){
     let m = masterySkills;
     if(!isMjMode) m = m.filter(s => s.etat === 'unlocked' || s.etat === 'available');
-    return m;
+    return dedupe(m);
   }
   let skills = allSkills.filter(s => s.ecole === currentSchool);
   // Mode joueur : masquer les sorts verrouillés (seuls unlocked et available sont visibles)
   if(!isMjMode){
     skills = skills.filter(s => s.etat === 'unlocked' || s.etat === 'available');
   }
-  return skills;
+  return dedupe(skills);
 }
 
 /* =========================================================
@@ -2728,7 +2734,7 @@ function buildFicheBody(d){
   let masteryLines = '';
   if(d.element){
     const eco = val('ecole').trim();
-    if(eco){
+    if(eco && eco.toLowerCase() !== 'default'){
       const ecoDisp = eco.toLowerCase() === 'general' ? 'Générale'
         : eco.charAt(0).toUpperCase() + eco.slice(1);
       masteryLines += `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">École :</span> ${ecoDisp}</div>`;
