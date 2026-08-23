@@ -1007,3 +1007,6 @@ body.mode-mastery .node .node-label{ transform:rotate(-45deg); }
 }
 .rank-rp .rank-block-title{ color:#8fdca0; }
 .rank-rp p{ color:#cfe8d6; font-style:italic; }
+
+/* Total calculé d'une stat BASE + BONUS */
+.stat-total{ color:var(--gold,#d4af6a); font-weight:600; }

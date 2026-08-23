@@ -2681,6 +2681,15 @@ function buildElementalEffectsSection(skill){
    ========================================================= */
 
 // Colonnes reconnues comme "statistiques" (affichées "→ Label : valeur")
+// ── BASES FORFAITAIRES (provisoires) ────────────────────────────────────────
+// Tant que les fiches joueur ne sont pas importées, les stats améliorables
+// utilisent ces BASE forfaitaires (BASE + BONUS). À REMPLACER plus tard par les
+// vraies bases lues depuis le classeur "stats" du joueur courant.
+const BASE_STATS_FORFAIT = {
+  precision: 65,   // Précision offensive de base (cf. fiche perso : 1d100 <= 65)
+  degats: 0,       // Base de dégâts (souvent un dé côté sort/arme ; 0 par défaut)
+};
+
 const STAT_DEFS = [
   { keys: ['action', 'type_action'], label: 'Type d\'action' },
   { keys: ['cout_nrj', 'cout_energie', 'cout_energetique'], label: 'Coût énergétique' },
@@ -2748,10 +2757,28 @@ function buildFicheBody(d){
     return '';
   };
 
-  // 1. Stats issues de colonnes dédiées (Évocation ; vides côté Elements)
+  // 1. Stats issues de colonnes dédiées.
+  //    Pour les stats AMÉLIORABLES (précision, dégâts), on affiche BASE + BONUS.
+  //    Les BASE sont FORFAITAIRES pour l'instant (voir BASE_STATS_FORFAIT) —
+  //    on les branchera plus tard sur le classeur "stats" de la fiche joueur.
+  const fmtStat = (key, raw) => {
+    const base = BASE_STATS_FORFAIT[key];
+    if(base === undefined) return parseRichText(raw);         // stat non améliorable → direct
+    const bonus = raw.trim();
+    const sign = bonus.startsWith('-') ? '−' : '+';
+    const body = bonus.replace(/^[+-]\s*/, '');               // valeur sans le signe
+    const pure = bonus.replace(/\s/g, '');
+    if(typeof base === 'number' && /^[+-]?\d+(\.\d+)?$/.test(pure)){
+      return `${base} ${sign} ${body} <span class="stat-total">= ${base + parseFloat(pure)}</span>`;
+    }
+    return `${base} ${sign} ${parseRichText(body)}`;           // % ou unité → on garde la formule
+  };
   const statLines = STAT_DEFS
     .filter(s => statVal(s).trim())
-    .map(s => `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${parseRichText(statVal(s))}</div>`)
+    .map(s => {
+      const key = s.key || (s.keys && s.keys[0]);
+      return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${fmtStat(key, statVal(s))}</div>`;
+    })
     .join('');
 
   // 1bis. Spécifique MAÎTRISE (le perk a un élément-racine) : école visée +
