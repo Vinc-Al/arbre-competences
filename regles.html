@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Règles — Arpenteurs d'Icatia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blood:#7a0d0d; --blood-bright:#b01818; --blood-glow:rgba(176,24,24,0.35);
+    --ink:#07070a; --ink-1:#100e12; --ink-2:#171319;
+    --parch:#e7dcc4; --parch-dim:#a89e8c; --edge:rgba(176,24,24,0.28);
+    --gold:#d4af6a;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family:'EB Garamond', Georgia, serif; color:var(--parch);
+    background:
+      radial-gradient(1000px 500px at 50% -10%, rgba(122,13,13,0.18), transparent 60%),
+      var(--ink);
+    display:flex; flex-direction:column; min-height:100%;
+  }
+  a{ color:inherit; }
+  /* ── NAV ── */
+  #main-nav{ display:flex; gap:4px; padding:10px 18px; background:rgba(10,8,10,0.85);
+    border-bottom:1px solid var(--edge); position:sticky; top:0; z-index:20; flex-wrap:wrap; }
+  #main-nav a{ text-decoration:none; color:var(--parch-dim); font-family:'Cinzel',serif; font-size:0.86rem;
+    padding:6px 12px; border-radius:8px; letter-spacing:0.03em; transition:.15s; }
+  #main-nav a:hover{ color:var(--parch); background:rgba(176,24,24,0.12); }
+  #main-nav a.active{ color:#f2e7d0; background:rgba(176,24,24,0.22); box-shadow:inset 0 0 0 1px var(--edge); }
+
+  .banner{ height:6px; background:linear-gradient(90deg,#4d0808,var(--blood),#4d0808); box-shadow:0 0 16px var(--blood-glow); }
+
+  .layout{ flex:1; display:flex; gap:0; max-width:1200px; width:100%; margin:0 auto; }
+  /* ── SOMMAIRE ── */
+  aside{ width:270px; flex-shrink:0; padding:26px 16px 40px; border-right:1px solid var(--edge);
+    position:sticky; top:47px; align-self:flex-start; height:calc(100vh - 47px); overflow-y:auto; }
+  aside h2{ font-family:'Cinzel',serif; font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--blood-bright); margin:0 0 14px 8px; }
+  .toc-section{ display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
+    font-family:'Cinzel',serif; color:var(--parch-dim); font-size:0.98rem; padding:9px 12px; border-radius:8px;
+    transition:.15s; letter-spacing:0.02em; }
+  .toc-section:hover{ color:var(--parch); background:rgba(176,24,24,0.10); }
+  .toc-section.active{ color:#f2e7d0; background:rgba(176,24,24,0.18); box-shadow:inset 3px 0 0 var(--blood-bright); }
+  .toc-sub{ display:flex; flex-direction:column; margin:2px 0 8px 14px; }
+  .toc-sub a{ text-decoration:none; color:var(--parch-dim); font-size:0.86rem; padding:4px 10px; border-radius:6px; transition:.12s; }
+  .toc-sub a:hover{ color:var(--parch); background:rgba(176,24,24,0.08); }
+
+  /* ── CONTENU ── */
+  main{ flex:1; padding:34px 46px 90px; max-width:820px; }
+  main h1{ font-family:'Cinzel',serif; font-weight:700; color:#f2e7d0; font-size:2rem;
+    border-bottom:2px solid var(--blood); padding-bottom:12px; margin-bottom:26px; letter-spacing:0.02em; }
+  main h2{ font-family:'Cinzel',serif; color:var(--blood-bright); font-size:1.4rem; margin:34px 0 12px; letter-spacing:0.02em; }
+  main h3{ font-family:'Cinzel',serif; color:var(--gold); font-size:1.12rem; margin:24px 0 8px; }
+  main h4{ color:var(--parch); font-size:1rem; margin:18px 0 6px; }
+  main p{ line-height:1.75; margin:0 0 14px; color:var(--parch); font-size:1.05rem; }
+  main ul{ margin:0 0 16px 22px; line-height:1.7; }
+  main li{ margin:4px 0; }
+  main strong{ color:#f2e7d0; }
+  main em{ color:var(--parch-dim); }
+  main code{ font-family:ui-monospace,monospace; background:rgba(176,24,24,0.12); padding:1px 6px; border-radius:5px; color:#e9c9a0; font-size:0.92em; }
+  .formula{ font-family:'Cinzel',serif; letter-spacing:0.02em; color:#e9c9a0; background:linear-gradient(180deg, rgba(30,10,10,0.5), rgba(12,9,12,0.5));
+    border-left:3px solid var(--blood-bright); padding:12px 16px; border-radius:6px; margin:0 0 16px; line-height:1.7; }
+
+  /* liens actifs */
+  .rule-link{ color:var(--gold); text-decoration:none; border-bottom:1px dotted var(--gold); cursor:pointer; }
+  .rule-link:hover{ color:var(--gold); background:rgba(212,175,106,0.12); }
+  .spell-ref{ color:#7fb0ff; text-decoration:none; border-bottom:1px dotted #7fb0ff; cursor:pointer; }
+  .spell-ref:hover{ background:rgba(127,176,255,0.12); }
+
+  /* prévisu au survol */
+  #preview{ position:fixed; z-index:50; max-width:320px; padding:12px 14px; border-radius:10px;
+    background:rgba(14,11,14,0.98); border:1px solid var(--edge); box-shadow:0 10px 40px rgba(0,0,0,0.7);
+    color:var(--parch); font-size:0.9rem; line-height:1.5; display:none; pointer-events:none; }
+  #preview .pv-title{ font-family:'Cinzel',serif; color:var(--gold); font-size:0.82rem; letter-spacing:0.06em;
+    text-transform:uppercase; margin-bottom:5px; }
+  #preview.spell .pv-title{ color:#7fb0ff; }
+
+  .empty-note{ color:var(--parch-dim); font-style:italic; }
+  @media(max-width:820px){ aside{ display:none; } main{ padding:24px 20px 70px; } }
+</style>
+</head>
+<body>
+  <nav id="main-nav">
+    <a href="index.html">⌂ Accueil</a>
+    <a href="magie.html">✦ Arbre de sorts</a>
+    <a href="martial.html">⚔ Voie martiale</a>
+    <a href="dons.html">📖 Dons</a>
+    <a href="maitrise.html">◈ Maîtrise élémentaire</a>
+    <a href="regles.html" class="active">📕 Règles</a>
+  </nav>
+  <div class="banner"></div>
+
+  <div class="layout">
+    <aside>
+      <h2>Le Grimoire</h2>
+      <div id="toc"></div>
+    </aside>
+    <main id="content"><p class="empty-note">Chargement…</p></main>
+  </div>
+
+  <div id="preview"></div>
+
+<script>
+// ── Sections des règles (une entrée par grande section) ──
+const SECTIONS = [
+  { key:'generalites',     file:'regles/generalites.md',     label:'I · Généralités' },
+  { key:'caracteristiques',file:'regles/caracteristiques.md',label:'II · Caractéristiques' },
+  { key:'combat',          file:'regles/combat.md',          label:'III · Combat' },
+  { key:'puzzle',          file:'regles/puzzle.md',          label:'IV · Puzzle' },
+];
+const cache = {};        // key -> markdown brut
+const headingIndex = {}; // terme (slug) -> { sectionKey, id, snippet }
+
+function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+
+// ── Markdown → HTML (léger, + liens [[ ]] et [ ]) ──
+function inline(s){
+  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = s.replace(/\[\[([^\]]+)\]\]/g, (m,t)=>`<a class="rule-link" data-term="${t.trim()}">${t.trim()}</a>`);
+  s = s.replace(/\[([^\[\]]+)\](?!\()/g, (m,t)=>`<a class="spell-ref" data-ref="${t.trim()}">${t.trim()}</a>`);
+  s = s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s = s.replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  s = s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  return s;
+}
+function mdToHtml(md){
+  const lines = md.replace(/\r/g,'').split('\n');
+  let html=''; let para=[], list=[], quote=[];
+  const fP=()=>{ if(para.length){ html+=`<p>${inline(para.join(' '))}</p>`; para=[]; } };
+  const fL=()=>{ if(list.length){ html+=`<ul>${list.map(li=>`<li>${inline(li)}</li>`).join('')}</ul>`; list=[]; } };
+  const fQ=()=>{ if(quote.length){ html+=`<div class="formula">${quote.map(inline).join('<br>')}</div>`; quote=[]; } };
+  const fAll=()=>{ fP(); fL(); fQ(); };
+  for(const raw of lines){
+    const line=raw.replace(/\s+$/,''); let m;
+    if(!line.trim()){ fAll(); continue; }
+    if((m=line.match(/^(#{1,4})\s+(.*)/))){ fAll(); const lvl=m[1].length, txt=m[2].trim(); html+=`<h${lvl} id="${slug(txt)}">${inline(txt)}</h${lvl}>`; continue; }
+    if((m=line.match(/^>\s?(.*)/))){ fP(); fL(); quote.push(m[1]); continue; }
+    if((m=line.match(/^[-*]\s+(.*)/))){ fP(); fQ(); list.push(m[1]); continue; }
+    fL(); fQ(); para.push(line);
+  }
+  fAll();
+  return html;
+}
+
+// ── Index des titres (pour la prévisu des [[ ]]) ──
+function indexHeadings(key, md){
+  const lines = md.replace(/\r/g,'').split('\n');
+  for(let i=0;i<lines.length;i++){
+    const m = lines[i].match(/^#{1,4}\s+(.*)/);
+    if(m){
+      const title = m[1].trim();
+      // snippet = 1er paragraphe non vide qui suit
+      let snip='';
+      for(let j=i+1;j<lines.length && j<i+8;j++){ const l=lines[j].trim(); if(l && !l.startsWith('#') && !l.startsWith('>')){ snip=l.replace(/[*`\[\]]/g,'').slice(0,200); break; } }
+      headingIndex[slug(title)] = { sectionKey:key, id:slug(title), title, snippet:snip };
+    }
+  }
+}
+
+// ── Chargement d'une section ──
+async function loadSection(key, anchor){
+  const sec = SECTIONS.find(s=>s.key===key); if(!sec) return;
+  let md = cache[key];
+  if(md===undefined){
+    try{ const r = await fetch(sec.file); md = r.ok ? await r.text() : `# ${sec.label}\n\n*Section indisponible.*`; }
+    catch(e){ md = `# ${sec.label}\n\n*Section indisponible (hors ligne).*`; }
+    cache[key]=md; indexHeadings(key, md);
+  }
+  document.getElementById('content').innerHTML = mdToHtml(md);
+  buildTOC(key);
+  wireLinks();
+  const el = anchor && document.getElementById(anchor);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  else window.scrollTo({top:0, behavior:'smooth'});
+  history.replaceState(null,'', '#'+key+(anchor?('/'+anchor):''));
+}
+
+// ── Sommaire latéral (sections + sous-titres de la section active) ──
+function buildTOC(activeKey){
+  const toc = document.getElementById('toc'); toc.innerHTML='';
+  SECTIONS.forEach(sec=>{
+    const btn = document.createElement('button');
+    btn.className = 'toc-section'+(sec.key===activeKey?' active':'');
+    btn.textContent = sec.label;
+    btn.onclick = ()=>loadSection(sec.key);
+    toc.appendChild(btn);
+    if(sec.key===activeKey){
+      const subs = [...document.querySelectorAll('#content h2, #content h3')];
+      if(subs.length){
+        const box = document.createElement('div'); box.className='toc-sub';
+        subs.forEach(h=>{ const a=document.createElement('a'); a.textContent=h.textContent; a.href='#'; a.onclick=(e)=>{e.preventDefault(); h.scrollIntoView({behavior:'smooth'});}; if(h.tagName==='H3') a.style.paddingLeft='22px'; box.appendChild(a); });
+        toc.appendChild(box);
+      }
+    }
+  });
+}
+
+// ── Liens actifs + prévisu ──
+const preview = () => document.getElementById('preview');
+function showPreview(el, html, isSpell){
+  const p = preview(); p.className = isSpell?'spell':''; p.innerHTML = html; p.style.display='block';
+  const r = el.getBoundingClientRect();
+  let top = r.bottom + 8, left = r.left;
+  if(left + 330 > window.innerWidth) left = window.innerWidth - 340;
+  if(top + p.offsetHeight > window.innerHeight) top = r.top - p.offsetHeight - 8;
+  p.style.left = Math.max(8,left)+'px'; p.style.top = Math.max(8,top)+'px';
+}
+function hidePreview(){ preview().style.display='none'; }
+
+function wireLinks(){
+  document.querySelectorAll('#content .rule-link').forEach(a=>{
+    const term = a.dataset.term, s = slug(term);
+    a.addEventListener('mouseenter', ()=>{
+      const h = headingIndex[s];
+      const body = h ? (h.snippet || 'Voir la règle associée.') : 'Terme du glossaire — section à venir.';
+      showPreview(a, `<div class="pv-title">Règle · ${term}</div>${body}`, false);
+    });
+    a.addEventListener('mouseleave', hidePreview);
+    a.addEventListener('click', ()=>{ const h=headingIndex[s]; if(h){ hidePreview(); loadSection(h.sectionKey, h.id); } });
+  });
+  document.querySelectorAll('#content .spell-ref').forEach(a=>{
+    const ref = a.dataset.ref;
+    a.addEventListener('mouseenter', ()=> showPreview(a, `<div class="pv-title">Sort / Manœuvre</div><strong>${ref}</strong><br>Cliquez pour ouvrir dans l'arbre.`, true));
+    a.addEventListener('mouseleave', hidePreview);
+    a.addEventListener('click', ()=>{ location.href = 'magie.html#ref='+encodeURIComponent(ref); });
+  });
+}
+
+// ── Init : précharge l'index de tous les titres, puis affiche la section demandée ──
+(async function init(){
+  await Promise.all(SECTIONS.map(async sec=>{
+    try{ const r=await fetch(sec.file); if(r.ok){ const md=await r.text(); cache[sec.key]=md; indexHeadings(sec.key, md); } }catch(e){}
+  }));
+  const hash = (location.hash||'#generalites').slice(1).split('/');
+  const key = SECTIONS.find(s=>s.key===hash[0]) ? hash[0] : 'generalites';
+  loadSection(key, hash[1]);
+})();
+</script>
+</body>
+</html>

@@ -2,15 +2,76 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<!-- L'arbre de sorts vit maintenant dans magie.html (harmonie avec martial.html / dons.html).
-     Ce fichier reste comme REDIRECTION : GitHub Pages sert index.html sur l'URL racine,
-     donc le supprimer donnerait un 404 sur https://<user>.github.io/<repo>/ -->
-<meta http-equiv="refresh" content="0; url=magie.html">
-<link rel="canonical" href="magie.html">
-<title>Arbre de compétences</title>
-<script>location.replace('magie.html');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arpenteurs d'Icatia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blood:#7a0d0d; --blood-bright:#b01818; --blood-glow:rgba(176,24,24,0.35);
+    --ink:#07070a; --parch:#e7dcc4; --parch-dim:#9c9384; --edge:rgba(176,24,24,0.30);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ height:100%; }
+  body{
+    font-family:'EB Garamond', Georgia, serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(122,13,13,0.22), transparent 60%),
+      radial-gradient(900px 500px at 50% 120%, rgba(122,13,13,0.16), transparent 60%),
+      var(--ink);
+    color:var(--parch); min-height:100%;
+    display:flex; flex-direction:column; position:relative; overflow-x:hidden;
+  }
+  body::before, body::after{
+    content:""; position:fixed; left:0; right:0; height:10px; z-index:5;
+    background:linear-gradient(90deg, #4d0808, var(--blood), #4d0808);
+    box-shadow:0 0 22px var(--blood-glow);
+  }
+  body::before{ top:0; } body::after{ bottom:0; }
+  .wrap{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; text-align:center; }
+  .sigil{ width:96px; height:96px; margin-bottom:26px; opacity:0.9; filter:drop-shadow(0 0 18px var(--blood-glow)); }
+  h1{ font-family:'Cinzel', serif; font-weight:700; font-size:clamp(2.4rem, 6vw, 4rem); letter-spacing:0.04em; color:#f2e7d0; text-shadow:0 2px 30px var(--blood-glow), 0 0 2px #000; }
+  .sub{ font-style:italic; color:var(--blood-bright); margin-top:10px; font-size:clamp(1rem,2.4vw,1.3rem); letter-spacing:0.06em; }
+  .tagline{ color:var(--parch-dim); margin-top:14px; max-width:560px; line-height:1.6; }
+  .doors{ display:flex; gap:26px; margin-top:52px; flex-wrap:wrap; justify-content:center; }
+  .door{
+    display:flex; flex-direction:column; align-items:center; gap:12px; width:260px; padding:34px 26px;
+    text-decoration:none; color:var(--parch);
+    background:linear-gradient(180deg, rgba(30,10,10,0.55), rgba(10,8,10,0.55));
+    border:1px solid var(--edge); border-radius:14px;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; position:relative;
+  }
+  .door:hover{ transform:translateY(-6px); border-color:var(--blood-bright); box-shadow:0 14px 44px rgba(0,0,0,0.6), 0 0 30px var(--blood-glow); }
+  .door .glyph{ font-size:2.6rem; filter:drop-shadow(0 0 14px var(--blood-glow)); }
+  .door .name{ font-family:'Cinzel',serif; font-size:1.25rem; letter-spacing:0.04em; color:#f2e7d0; }
+  .door .desc{ font-size:0.92rem; color:var(--parch-dim); line-height:1.5; }
+  footer{ text-align:center; padding:18px; color:var(--parch-dim); font-size:0.8rem; font-style:italic; }
+</style>
 </head>
 <body>
-<p>Redirection vers <a href="magie.html">l'arbre de sorts</a>…</p>
+  <div class="wrap">
+    <svg class="sigil" viewBox="0 0 100 100" fill="none" stroke="#b01818" stroke-width="2">
+      <circle cx="50" cy="50" r="44"/>
+      <circle cx="50" cy="50" r="34" opacity="0.5"/>
+      <path d="M50 6 L50 94 M6 50 L94 50 M18 18 L82 82 M82 18 L18 82" opacity="0.4"/>
+      <circle cx="50" cy="50" r="9" fill="#7a0d0d" stroke="#b01818"/>
+    </svg>
+    <h1>Arpenteurs d'Icatia</h1>
+    <div class="sub">Système de la trame Imhullu</div>
+    <p class="tagline">Le grimoire des Arpenteurs. Choisissez votre voie : parcourir les arbres de pouvoir, ou consulter les lois qui régissent la trame.</p>
+    <nav class="doors">
+      <a class="door" href="magie.html">
+        <span class="glyph">✦</span>
+        <span class="name">Arbres de compétences</span>
+        <span class="desc">Sorts, voie martiale, dons et maîtrise élémentaire.</span>
+      </a>
+      <a class="door" href="regles.html">
+        <span class="glyph">📕</span>
+        <span class="name">Les Règles</span>
+        <span class="desc">Le manuel du système : caractéristiques, combat, et davantage.</span>
+      </a>
+    </nav>
+  </div>
+  <footer>Système Icatia — v0.1</footer>
 </body>
 </html>
