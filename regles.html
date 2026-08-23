@@ -33,10 +33,12 @@
 
   .banner{ height:6px; background:linear-gradient(90deg,#4d0808,var(--blood),#4d0808); box-shadow:0 0 16px var(--blood-glow); }
 
-  .layout{ flex:1; display:flex; gap:0; max-width:1200px; width:100%; margin:0 auto; }
+  .layout{ flex:1; display:flex; gap:0; max-width:1200px; width:100%; margin:0 auto;
+    min-height:calc(100vh - 54px); }
   /* ── SOMMAIRE ── */
-  aside{ width:270px; flex-shrink:0; padding:26px 16px 40px; border-right:1px solid var(--edge);
-    position:sticky; top:47px; align-self:flex-start; height:calc(100vh - 47px); overflow-y:auto; }
+  aside{ width:270px; flex-shrink:0; border-right:1px solid var(--edge); }
+  aside .toc-inner{ position:sticky; top:54px; padding:26px 16px 40px;
+    max-height:calc(100vh - 54px); overflow-y:auto; }
   aside h2{ font-family:'Cinzel',serif; font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase;
     color:var(--blood-bright); margin:0 0 14px 8px; }
   .toc-section{ display:block; width:100%; text-align:left; background:none; border:none; cursor:pointer;
@@ -95,8 +97,10 @@
 
   <div class="layout">
     <aside>
-      <h2>Le Grimoire</h2>
-      <div id="toc"></div>
+      <div class="toc-inner">
+        <h2>Le Grimoire</h2>
+        <div id="toc"></div>
+      </div>
     </aside>
     <main id="content"><p class="empty-note">Chargement…</p></main>
   </div>
@@ -165,9 +169,23 @@ async function loadSection(key, anchor){
   const sec = SECTIONS.find(s=>s.key===key); if(!sec) return;
   let md = cache[key];
   if(md===undefined){
-    try{ const r = await fetch(sec.file); md = r.ok ? await r.text() : `# ${sec.label}\n\n*Section indisponible.*`; }
-    catch(e){ md = `# ${sec.label}\n\n*Section indisponible (hors ligne).*`; }
-    cache[key]=md; indexHeadings(key, md);
+    let ok=false, status='';
+    try{ const r = await fetch(sec.file); ok=r.ok; status=r.status; if(ok) md = await r.text(); }
+    catch(e){ status = (location.protocol==='file:') ? 'file://' : (e && e.message) || 'réseau'; }
+    if(ok){ cache[key]=md; indexHeadings(key, md); }
+    else {
+      const url = new URL(sec.file, location.href).href;
+      const hint = (location.protocol==='file:')
+        ? "Tu ouvres le site en <b>local (file://)</b> : le navigateur bloque le chargement des fichiers. Passe par <b>GitHub Pages</b> ou un petit serveur local (ex. <code>python -m http.server</code>)."
+        : "Vérifie que le dossier <code>regles/</code> (avec les <code>.md</code>) est bien <b>poussé sur le repo</b>, à côté de <code>regles.html</code>.";
+      document.getElementById('content').innerHTML =
+        `<h1>${sec.label}</h1>`+
+        `<p class="empty-note">⚠ Impossible de charger <code>${sec.file}</code>${status?(' ('+status+')'):''}.</p>`+
+        `<p class="empty-note">URL testée : <code>${url}</code></p>`+
+        `<p class="empty-note">${hint}</p>`;
+      buildTOC(key);
+      return;
+    }
   }
   document.getElementById('content').innerHTML = mdToHtml(md);
   buildTOC(key);
