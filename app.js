@@ -2692,8 +2692,10 @@ const BASE_STATS_FORFAIT = {
 
 const STAT_DEFS = [
   { keys: ['action', 'type_action'], label: 'Type d\'action' },
+  { keys: ['duree_incant', 'duree_incantation', 'temps_incant'], label: 'Durée d\'incantation' },
   { keys: ['cout_nrj', 'cout_energie', 'cout_energetique'], label: 'Coût énergétique' },
   { key: 'degats', label: 'Dégâts' },
+  { keys: ['degats_duree', 'degats_dot'], label: 'Dégâts sur la durée' },
   { key: 'precision', label: 'Précision' },
   { key: 'portee', label: 'Portée' },
   { key: 'zone', label: 'Zone' },
