@@ -984,3 +984,26 @@ body.mode-mastery .node .node-icon-img{
 body.mode-mastery .node .node-icon-img{ border-radius:8px; }
 /* le label reste droit et lisible sous le losange */
 body.mode-mastery .node .node-label{ transform:rotate(-45deg); }
+
+/* ── Fiche réformée : Évolution de / Formes / Description RP ─────────────────── */
+.rank-evolution{
+  font-size:0.86rem; color:var(--text-secondary,#b8c0d0);
+  padding:8px 10px; margin-bottom:10px;
+  background:rgba(212,175,106,0.08); border:1px solid rgba(212,175,106,0.25);
+  border-radius:8px;
+}
+.rank-evolution .stat-label{ color:var(--gold,#d4af6a); font-weight:600; }
+.rank-evolution .heritage-type{ color:var(--text-tertiary,#8890a0); font-style:italic; font-size:0.8rem; }
+
+.rank-block-title{
+  font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--text-tertiary,#8890a0); font-weight:700; margin-bottom:6px;
+}
+.rank-formes{ margin:10px 0; padding:10px; border-radius:8px; background:rgba(111,168,255,0.06); border:1px solid rgba(111,168,255,0.18); }
+
+.rank-rp{
+  margin-top:12px; padding:10px 12px; border-radius:8px;
+  background:rgba(120,200,140,0.10); border:1px solid rgba(120,200,140,0.30);
+}
+.rank-rp .rank-block-title{ color:#8fdca0; }
+.rank-rp p{ color:#cfe8d6; font-style:italic; }

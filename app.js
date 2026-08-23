@@ -1787,7 +1787,7 @@ function buildBrancheGraph(skills){
   // (ex. "necro_soin_groupe_5,necro_projection_soin_5" pour un capstone
   //  convergent). Le 1er parent valide définit le fork de branche ;
   //  les suivants deviennent des liens croisés supplémentaires (extraParentLinks).
-  const parseParents = pid => String(pid || '').split(',').map(x => x.trim()).filter(Boolean);
+  const parseParents = pid => parseParentIds(pid).ids;
   const extraParentLinks = []; // [{ childId, parentId }]
 
   Object.keys(byBranche).forEach(key => {
@@ -1822,9 +1822,25 @@ function buildBrancheGraph(skills){
   return { byBranche, brancheParent, childrenOf, rootBranches, extraParentLinks };
 }
 
+// ── RÉFORME HÉRITAGE ────────────────────────────────────────────────────────
+// Découpe parent_id en { ids, type } selon le SÉPARATEUR utilisé :
+//   ";" = ET (tous requis)   ·   "." = OU exclusif (exactement un)
+//   "," = OU logique (au moins un)   ·   parent unique = pas de type (traité ET)
+// On suppose un seul type de séparateur par champ (on détecte celui présent).
+function parseParentIds(pid){
+  const raw = String(pid || '').trim();
+  if(!raw) return { ids: [], type: 'and' };
+  let sep = ',', type = 'or';
+  if(raw.includes(';')){ sep = ';'; type = 'and'; }
+  else if(raw.includes('.')){ sep = '.'; type = 'xor'; }
+  const ids = raw.split(sep).map(x => x.trim()).filter(Boolean);
+  return { ids, type: ids.length > 1 ? type : 'and' };
+}
+const HERITAGE_LABEL = { and: 'Héritage nécessaire (ET)', or: 'Héritage logique (OU)', xor: 'Héritage exclusif (OU exclusif)' };
+
 function buildHierarchy(skills){
   const byId = {}; skills.forEach(s => byId[s.id] = s);
-  const parseP = pid => String(pid||'').split(',').map(x=>x.trim()).filter(p => byId[p]);
+  const parseP = pid => parseParentIds(pid).ids.filter(p => byId[p]);
   // nœuds d'une même branche, triés par niveau → sert de chaîne pour les sorts
   // dont seuls les nœuds de fork portent un parent_id explicite.
   const byBr = {};
@@ -1969,7 +1985,7 @@ const GAL = {
 function galaxyLayout(skills){
   const STEP = GAL.NODE_D + GAL.RING_GAP;
   const byId = {}; skills.forEach(s => byId[s.id] = s);
-  const parseParents = pid => String(pid||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const parseParents = pid => parseParentIds(pid).ids;
   const firstParent = s => { const ps = parseParents(s.parent_id).filter(p => byId[p]); return ps[0] || null; };
   const children = {};
   skills.forEach(s => { const p = firstParent(s); if(p){ (children[p] = children[p] || []).push(s.id); } });
@@ -2157,7 +2173,7 @@ function wireDependencyHighlight(skills){
   Object.values(byBr).forEach(l => l.sort((a,b)=>(+a.niveau||0)-(+b.niveau||0)));
   const avant = {}, apres = {};
   skills.forEach(s => {
-    let ps = String(s.parent_id||'').split(',').map(x=>x.trim()).filter(p => byId[p]);
+    let ps = parseParentIds(s.parent_id).ids.filter(p => byId[p]);
     if(!ps.length){
       const l = byBr[s.branche] || []; const i = l.indexOf(s);
       if(i > 0) ps = [l[i-1].id];      // chaîne linéaire : prédécesseur de tier
@@ -2402,11 +2418,11 @@ function updatePointsDisplay(skills){
    Prérequis d'un nœud = sa liste parent_id ("a,b,c" = les trois requis) ;
    à défaut, son prédécesseur dans la même branche (niveau-1) pour les chaînes. */
 function prereqsOf(skill, byId, predOf){
-  const ps = String(skill.parent_id || '').split(',').map(x=>x.trim())
-    .filter(Boolean).filter(p => byId[p]);
-  if(ps.length) return ps;                         // parents explicites (ET)
+  const parsed = parseParentIds(skill.parent_id);
+  const ps = parsed.ids.filter(p => byId[p]);
+  if(ps.length) return { ids: ps, type: parsed.type };            // parents explicites + type
   const pred = predOf[skill.branche + '@' + ((+skill.niveau||0) - 1)];
-  return pred ? [pred] : [];                        // sinon prédécesseur de chaîne
+  return { ids: pred ? [pred] : [], type: 'and' };                 // sinon prédécesseur de chaîne
 }
 
 function recomputeAvailability(){
@@ -2416,7 +2432,12 @@ function recomputeAvailability(){
   allSkills = allSkills.map(s => {
     if(s.etat !== 'locked') return s;
     const pr = prereqsOf(s, byId, predOf);
-    const ok = pr.length && pr.every(p => byId[p] && byId[p].etat === 'unlocked');
+    if(!pr.ids.length) return s;
+    const nbUnlocked = pr.ids.filter(p => byId[p] && byId[p].etat === 'unlocked').length;
+    let ok;
+    if(pr.type === 'or') ok = nbUnlocked >= 1;          // OU logique : au moins un
+    else if(pr.type === 'xor') ok = nbUnlocked === 1;   // OU exclusif : exactement un
+    else ok = nbUnlocked === pr.ids.length;             // ET : tous
     return ok ? { ...s, etat: 'available' } : s;
   });
 }
@@ -2661,10 +2682,15 @@ function buildElementalEffectsSection(skill){
 
 // Colonnes reconnues comme "statistiques" (affichées "→ Label : valeur")
 const STAT_DEFS = [
-  { key: 'degats', label: 'Dégâts génériques' },
+  { keys: ['action', 'type_action'], label: 'Type d\'action' },
+  { keys: ['cout_nrj', 'cout_energie', 'cout_energetique'], label: 'Coût énergétique' },
+  { key: 'degats', label: 'Dégâts' },
+  { key: 'precision', label: 'Précision' },
   { key: 'portee', label: 'Portée' },
+  { key: 'zone', label: 'Zone' },
   { key: 'duree',  label: 'Durée' },
-  { key: 'action', label: 'Ressource d\'Action' },
+  { keys: ['need', 'necessite'], label: 'Nécessite' },
+  { keys: ['school'], label: 'École' },
   { key: 'invocation', label: 'Invocation' },
   // Colonne d'équilibrage. L'en-tête est normalisé en minuscules par parseCSV,
   // donc "Temps de recharge" → "temps de recharge" ; on accepte aussi quelques
@@ -2746,6 +2772,43 @@ function buildFicheBody(d){
   }
   const allStatLines = statLines + masteryLines;
 
+  // 1ter. ÉVOLUTION DE : noms (pas ids) des prérequis + type d'héritage
+  const resolveName = id => {
+    const pool = (typeof allSkills !== 'undefined' ? allSkills : [])
+      .concat(typeof masterySkills !== 'undefined' ? masterySkills : []);
+    const f = pool.find(s => s.id === id);
+    return f ? (f.nom || f.id) : id;
+  };
+  let evolutionHtml = '';
+  const par = parseParentIds(d.parent_id);
+  if(par.ids.length){
+    const glue = par.type === 'and' ? ' + ' : (par.type === 'xor' ? ' ⊕ ' : ' / ');
+    const names = par.ids.map(resolveName).join(glue);
+    const typeLabel = par.ids.length > 1 ? ` <span class="heritage-type">(${HERITAGE_LABEL[par.type]})</span>` : '';
+    evolutionHtml = `<div class="rank-evolution"><span class="stat-label">Évolution de :</span> ${names}${typeLabel}</div>`;
+  }
+
+  // 1quater. FORMES : évolutions génériques "cle:±valeur" → lignes ; sinon (non
+  // générique) texte libre. isevolutionforme est un simple marqueur.
+  const formes = [];
+  for(let i = 1; i <= 12; i++){ const v = val('forme' + i).trim(); if(v) formes.push(v); }
+  let formeHtml = '';
+  if(formes.length){
+    const lines = formes.map(f => {
+      const m = f.match(/^([^:]+):\s*([+-].*)$/);
+      if(m){
+        const cle = m[1].trim();
+        return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${cle.charAt(0).toUpperCase()+cle.slice(1)} :</span> ${m[2].trim()}</div>`;
+      }
+      return `<div class="rank-special">${parseRichText(f)}</div>`;   // évolution non générique
+    }).join('');
+    formeHtml = `<div class="rank-formes"><div class="rank-block-title">Évolutions</div>${lines}</div>`;
+  }
+
+  // 1quinquies. DESCRIPTION RP (bloc vert)
+  const rp = (val('description_rp') || val('description_RP')).trim();
+  const rpHtml = rp ? `<div class="rank-rp"><div class="rank-block-title">Description RP</div>${buildDescriptionHtml(rp)}</div>` : '';
+
   // 2. Description (paragraphes + puces "→" du Sheet)
   const descHtml = buildDescriptionHtml(d.description);
 
@@ -2762,6 +2825,9 @@ function buildFicheBody(d){
     descHtml,
     statsHtml: allStatLines ? `<div class="rank-stats">${allStatLines}</div>` : '',
     specialHtml,
+    evolutionHtml,
+    formeHtml,
+    rpHtml,
   };
 }
 
@@ -2784,14 +2850,17 @@ function openPanel(skill){
   const forkLabel = skill.parent_id ? skill.parent_id : null;
 
   // Fiche commune (stats, description, encadrés) — cf. buildFicheBody
-  const { descHtml, statsHtml, specialHtml } = buildFicheBody(skill);
+  const { descHtml, statsHtml, specialHtml, evolutionHtml, formeHtml, rpHtml } = buildFicheBody(skill);
   const elementalSection = buildElementalEffectsSection(skill);
 
   const body = document.getElementById('panel-body');
   body.innerHTML = `
+    ${evolutionHtml}
     ${descHtml}
     ${statsHtml}
+    ${formeHtml}
     ${specialHtml}
+    ${rpHtml}
     ${elementalSection}
     ${forkLabel ? `<div class="stat-row"><span class="label">S'embranche depuis</span><span>${forkLabel}</span></div>` : ''}
     <span class="status-chip ${skill.etat || 'locked'}">${statusLabel(skill.etat)}</span>
