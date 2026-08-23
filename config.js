@@ -233,7 +233,6 @@ const DATA_SHEETS = {
   	illusion: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=320736990&single=true&output=csv",
 	abjuration: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=955160217&single=true&output=csv",
 	divination: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1897246214&single=true&output=csv",
-	enchantement: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQFnGDfdGQG1QU1vPTODv-L6YW52rQDIdlO7IMDpr5vty7Q28F44FDsmlmk9m2eY4RDtZs9RPEUcpoC/pub?gid=1649994559&single=true&output=csv"
 },
 
   // ── ONGLETS MARTIAUX (page martial.html) ──────────────────────────────────
@@ -310,14 +309,13 @@ const PLAYER_SAVE_SHEETS = {
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoI0fTradSvM-MD109rCxSFki_Vzsoe0lbmBi897g6JuejZ7nTY6t7G4WSWmffNOhW/exec";
 
 const SCHOOL_THEMES = {
-  evocation:    { label: "Évocation",    color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
-  abjuration:   { label: "Abjuration",   color: "#6fa8ff", glow: "rgba(111,168,255,0.4)" },
+  evocation:    { label: "Destruction",  color: "#e0593f", glow: "rgba(224,89,63,0.4)" },
+  abjuration:   { label: "Anathémancie",   color: "#6fa8ff", glow: "rgba(111,168,255,0.4)" },
   invocation:   { label: "Invocation",   color: "#4fd17e", glow: "rgba(79,209,126,0.4)" },
   transmutation:{ label: "Transmutation",color: "#d4af6a", glow: "rgba(212,175,106,0.4)" },
   divination:   { label: "Divination",  color: "#5fd6d6", glow: "rgba(95,214,214,0.4)" },
-  illusion:     { label: "Illusion",     color: "#a98ce0", glow: "rgba(169,140,224,0.4)" },
-  enchantement: { label: "Enchantement", color: "#e08ac0", glow: "rgba(224,138,192,0.4)" },
-  necromancie:  { label: "Nécromancie",  color: "#8a7ea8", glow: "rgba(138,126,168,0.4)" },
+  illusion:     { label: "Psychomancie",     color: "#a98ce0", glow: "rgba(169,140,224,0.4)" },
+  necromancie:  { label: "Phytonécromancie",  color: "#8a7ea8", glow: "rgba(138,126,168,0.4)" },
   // ── Catégories MARTIALES (page martial.html) ──────────────────────────────
   armes:        { label: "Armes",        color: "#c0562f", glow: "rgba(192,86,47,0.4)" },
   armures:      { label: "Armures",      color: "#8a8f98", glow: "rgba(138,143,152,0.4)" },
@@ -523,138 +521,6 @@ function lvl(id, nom, branche, niveau, parent_id, etat, opts){
 const DEMO_DATA = [
   // ===================== ÉVOCATION (inspirée du modèle de référence) =====================
   // Branche principale : Trait énergétique (0..VI)
-  lvl("evo_te_0","Trait énergétique 0","trait_energetique",0,"","unlocked",{
-    ecole:"evocation", icone:"⚡",
-    description:"Vous ciblez une créature que vous pouvez voir, vous lancez une **attaque de sort à distance** [élémentaire](element) sur une **cible unique**.",
-    degats:"1d8", portee:"18 mètres", duree:"Instantané", action:"Action",
-    special:"**Affinité élémentaire 0** : Les éléments changent le type de dégât du sort.",
-    effets:"+5% dégâts directs"
-  }),
-  lvl("evo_te_1","Trait énergétique I","trait_energetique",1,"","unlocked",{
-    ecole:"evocation", icone:"⚡",
-    description:"Vous ciblez une créature que vous pouvez voir, vous lancez une **attaque de sort à distance** [élémentaire](element) sur une **cible unique**.",
-    degats:"1d10", portee:"18 mètres", duree:"Instantané", action:"Action",
-    special:"**Affinité élémentaire I** : Les éléments changent le type de dégât du sort.",
-    effets:"+10% dégâts directs"
-  }),
-  lvl("evo_te_2","Trait énergétique II","trait_energetique",2,"","available",{ecole:"evocation",icone:"⚡",effets:"+15% dégâts directs"}),
-  lvl("evo_te_3","Trait énergétique III","trait_energetique",3,"","locked",{ecole:"evocation",icone:"⚡",effets:"+20% dégâts directs"}),
-  lvl("evo_te_4","Trait énergétique IV","trait_energetique",4,"","locked",{ecole:"evocation",icone:"⚡",effets:"+25% dégâts directs"}),
-  lvl("evo_te_5","Trait énergétique V","trait_energetique",5,"","locked",{ecole:"evocation",icone:"⚡",effets:"+30% dégâts directs"}),
-
-  // Fork depuis Trait énergétique I -> Lien persistant (I..VI)
-  lvl("evo_lp_1","Lien persistant I","lien_persistant",1,"evo_te_1","locked",{ecole:"evocation",icone:"🔗",effets:"Le sort reste actif 1 tour de plus"}),
-  lvl("evo_lp_2","Lien persistant II","lien_persistant",2,"","locked",{ecole:"evocation",icone:"🔗"}),
-  lvl("evo_lp_3","Lien persistant III","lien_persistant",3,"","locked",{ecole:"evocation",icone:"🔗"}),
-
-  // Fork depuis Trait énergétique II -> Trait corrosif (I..V)
-  lvl("evo_tc_1","Trait corrosif I","trait_corrosif",1,"evo_te_2","locked",{ecole:"evocation",icone:"🧪",effets:"Ajoute des dégâts corrosifs sur la durée"}),
-  lvl("evo_tc_2","Trait corrosif II","trait_corrosif",2,"","locked",{ecole:"evocation",icone:"🧪"}),
-
-  // Fork depuis Trait énergétique III -> Arc élémentaire (I..III)
-  lvl("evo_ae_1","Arc élémentaire I","arc_elementaire",1,"evo_te_3","locked",{ecole:"evocation",icone:"🌈",effets:"Le sort touche une cible additionnelle"}),
-  lvl("evo_ae_2","Arc élémentaire II","arc_elementaire",2,"","locked",{ecole:"evocation",icone:"🌈"}),
-
-  // Branche principale : Nova (0..VI)
-  lvl("evo_nova_0","Nova 0","nova",0,"","unlocked",{ecole:"evocation",icone:"💫",description:"Explosion d'énergie en zone autour du lanceur.",effets:"+10% dégâts en zone"}),
-  lvl("evo_nova_1","Nova I","nova",1,"","unlocked",{ecole:"evocation",icone:"💫"}),
-  lvl("evo_nova_2","Nova II","nova",2,"","available",{ecole:"evocation",icone:"💫"}),
-  lvl("evo_nova_3","Nova III","nova",3,"","locked",{ecole:"evocation",icone:"💫"}),
-
-  // Fork depuis Nova II -> Canalisation (I..IV)
-  lvl("evo_can_1","Canalisation I","canalisation",1,"evo_nova_2","locked",{ecole:"evocation",icone:"🌀",effets:"Réduit le coût en mana de Nova de 20%"}),
-  lvl("evo_can_2","Canalisation II","canalisation",2,"","locked",{ecole:"evocation",icone:"🌀"}),
-
-  // Branche principale : Impact ciblé (I..VI)
-  lvl("evo_ic_1","Impact ciblé I","impact_cible",1,"","unlocked",{ecole:"evocation",icone:"🎯",description:"Frappe précise sur une cible unique.",effets:"+12% dégâts sur cible unique"}),
-  lvl("evo_ic_2","Impact ciblé II","impact_cible",2,"","available",{ecole:"evocation",icone:"🎯"}),
-  lvl("evo_ic_3","Impact ciblé III","impact_cible",3,"","locked",{ecole:"evocation",icone:"🎯"}),
-
-  // Fork depuis Impact ciblé I -> Persistance (I..V)
-  lvl("evo_pers_1","Persistance I","persistance",1,"evo_ic_1","locked",{ecole:"evocation",icone:"⏱️",effets:"Le sort infinige des dégâts sur la durée"}),
-  lvl("evo_pers_2","Persistance II","persistance",2,"","locked",{ecole:"evocation",icone:"⏱️"}),
-  lvl("evo_pers_3","Persistance III","persistance",3,"","locked",{ecole:"evocation",icone:"⏱️"}),
-
-  // Fork depuis Persistance III -> Cataclysme (I..II)
-  lvl("evo_cata_1","Cataclysme I","cataclysme",1,"evo_pers_3","locked",{ecole:"evocation",icone:"🌋",cout:5,effets:"Sort ultime : dégâts dévastateurs en zone"}),
-  lvl("evo_cata_2","Cataclysme II","cataclysme",2,"","locked",{ecole:"evocation",icone:"🌋",cout:6}),
-
-  // Branche : Propagation (I..VI), part directement de l'école (comme dans le modèle)
-  lvl("evo_prop_1","Propagation I","propagation",1,"","locked",{ecole:"evocation",icone:"🔥",description:"Le sort se propage aux cibles environnantes.",effets:"Propage 30% des dégâts aux cibles proches"}),
-  lvl("evo_prop_2","Propagation II","propagation",2,"","locked",{ecole:"evocation",icone:"🔥"}),
-
-  // Branche : Éclats d'énergie (0..VI), avec fork vers Missile magique
-  lvl("evo_ee_0","Éclats d'énergie 0","eclats_energie",0,"","unlocked",{ecole:"evocation",icone:"✨",description:"Multiples petits projectiles d'énergie.",effets:"3 projectiles, +5% dégâts chacun"}),
-  lvl("evo_ee_1","Éclats d'énergie I","eclats_energie",1,"","unlocked",{ecole:"evocation",icone:"✨"}),
-
-  lvl("evo_mm_1","Missile magique I","missile_magique",1,"evo_ee_0","available",{ecole:"evocation",icone:"🔥",lien:"https://docs.google.com/presentation/d/EXEMPLE",effets:"Projectile increvable, touche toujours sa cible"}),
-  lvl("evo_mm_2","Missile magique II","missile_magique",2,"","locked",{ecole:"evocation",icone:"🔥"}),
-
-  // Branche : Intrusion magique (0..VI)
-  lvl("evo_im_0","Intrusion magique 0","intrusion_magique",0,"","unlocked",{ecole:"evocation",icone:"🌐",description:"Perce les protections magiques adverses.",effets:"Ignore 15% des résistances magiques"}),
-  lvl("evo_im_1","Intrusion magique I","intrusion_magique",1,"","locked",{ecole:"evocation",icone:"🌐"}),
-
-  // Branche : Chatiment (0..V)
-  lvl("evo_chat_0","Chatiment 0","chatiment",0,"","unlocked",{ecole:"evocation",icone:"⚔️",description:"Sort punitif contre les cibles affaiblies.",effets:"+20% dégâts contre cible sous 30% PV"}),
-  lvl("evo_chat_1","Chatiment I","chatiment",1,"","locked",{ecole:"evocation",icone:"⚔️"}),
-
-  // ===================== AUTRES ÉCOLES (structure simplifiée à 3-4 branches) =====================
-  // ABJURATION
-  lvl("abj_bouc_0","Bouclier 0","bouclier",0,"","unlocked",{ecole:"abjuration",icone:"🛡️",description:"Absorbe une partie des dégâts entrants.",effets:"Absorbe 10 points de dégâts"}),
-  lvl("abj_bouc_1","Bouclier I","bouclier",1,"","unlocked",{ecole:"abjuration",icone:"🛡️"}),
-  lvl("abj_bouc_2","Bouclier II","bouclier",2,"","available",{ecole:"abjuration",icone:"🛡️"}),
-  lvl("abj_mur_1","Mur de Force I","mur_de_force",1,"abj_bouc_1","locked",{ecole:"abjuration",icone:"🧱",effets:"Bloque les attaques physiques 1 tour"}),
-  lvl("abj_mur_2","Mur de Force II","mur_de_force",2,"","locked",{ecole:"abjuration",icone:"🧱"}),
-  lvl("abj_diss_1","Dissipation I","dissipation",1,"","locked",{ecole:"abjuration",icone:"✨",description:"Annule les effets magiques actifs sur la cible.",effets:"Retire 1 effet magique"}),
-  lvl("abj_diss_2","Dissipation II","dissipation",2,"","locked",{ecole:"abjuration",icone:"✨"}),
-
-  // INVOCATION
-  lvl("inv_lame_0","Lame spectrale 0","lame_spectrale",0,"","unlocked",{ecole:"invocation",icone:"🗡️",description:"Fait apparaître une arme temporaire.",effets:"+10% dégâts de mêlée"}),
-  lvl("inv_lame_1","Lame spectrale I","lame_spectrale",1,"","unlocked",{ecole:"invocation",icone:"🗡️"}),
-  lvl("inv_lame_2","Lame spectrale II","lame_spectrale",2,"","available",{ecole:"invocation",icone:"🗡️"}),
-  lvl("inv_fam_1","Familier I","familier",1,"inv_lame_1","locked",{ecole:"invocation",icone:"🐺",effets:"Invoque un allié (15 PV)"}),
-  lvl("inv_fam_2","Familier II","familier",2,"","locked",{ecole:"invocation",icone:"🐺"}),
-  lvl("inv_porte_1","Porte dimensionnelle I","porte_dimensionnelle",1,"","locked",{ecole:"invocation",icone:"🌀",cout:4,description:"Ouvre un passage instantané.",effets:"Téléportation courte distance"}),
-
-  // TRANSMUTATION
-  lvl("tra_renf_0","Renforcement 0","renforcement",0,"","unlocked",{ecole:"transmutation",icone:"💪",description:"Augmente temporairement la force physique.",effets:"+10% force"}),
-  lvl("tra_renf_1","Renforcement I","renforcement",1,"","unlocked",{ecole:"transmutation",icone:"💪"}),
-  lvl("tra_renf_2","Renforcement II","renforcement",2,"","available",{ecole:"transmutation",icone:"💪"}),
-  lvl("tra_peau_1","Peau de pierre I","peau_de_pierre",1,"tra_renf_1","locked",{ecole:"transmutation",icone:"🗿",effets:"+15% armure, -5% vitesse"}),
-  lvl("tra_peau_2","Peau de pierre II","peau_de_pierre",2,"","locked",{ecole:"transmutation",icone:"🗿"}),
-  lvl("tra_meta_1","Métamorphose I","metamorphose",1,"","locked",{ecole:"transmutation",icone:"🐉",cout:4,description:"Transforme le lanceur en créature puissante.",effets:"Transformation partielle, +stats"}),
-
-  // DIVINATION
-  lvl("div_det_0","Détection 0","detection",0,"","unlocked",{ecole:"divination",icone:"👁️",description:"Révèle la magie environnante.",effets:"Détecte la magie (rayon 5m)"}),
-  lvl("div_det_1","Détection I","detection",1,"","unlocked",{ecole:"divination",icone:"👁️"}),
-  lvl("div_det_2","Détection II","detection",2,"","available",{ecole:"divination",icone:"👁️"}),
-  lvl("div_vision_1","Vision future I","vision_future",1,"div_det_1","locked",{ecole:"divination",icone:"🔮",effets:"+10% chance d'esquive"}),
-  lvl("div_vision_2","Vision future II","vision_future",2,"","locked",{ecole:"divination",icone:"🔮"}),
-  lvl("div_oeil_1","Œil omniscient I","oeil_omniscient",1,"","locked",{ecole:"divination",icone:"🌐",cout:4,description:"Perçoit tout le champ de bataille.",effets:"Révèle la zone, détecte l'invisible"}),
-
-  // ILLUSION
-  lvl("ill_image_0","Image miroir 0","image_miroir",0,"","unlocked",{ecole:"illusion",icone:"🪞",description:"Crée des copies illusoires.",effets:"+10% chance d'esquive"}),
-  lvl("ill_image_1","Image miroir I","image_miroir",1,"","unlocked",{ecole:"illusion",icone:"🪞"}),
-  lvl("ill_image_2","Image miroir II","image_miroir",2,"","available",{ecole:"illusion",icone:"🪞"}),
-  lvl("ill_invis_1","Invisibilité I","invisibilite",1,"ill_image_1","locked",{ecole:"illusion",icone:"👻",effets:"Invisibilité totale, rompue par attaque"}),
-  lvl("ill_invis_2","Invisibilité II","invisibilite",2,"","locked",{ecole:"illusion",icone:"👻"}),
-  lvl("ill_double_1","Double fantôme I","double_fantome",1,"","locked",{ecole:"illusion",icone:"🎭",cout:4,description:"Crée un clone autonome.",effets:"Clone actif 2 tours"}),
-
-  // ENCHANTEMENT
-  lvl("ench_sugg_0","Suggestion 0","suggestion",0,"","unlocked",{ecole:"enchantement",icone:"💭",description:"Influence légèrement une décision.",effets:"+10% chance de persuasion"}),
-  lvl("ench_sugg_1","Suggestion I","suggestion",1,"","unlocked",{ecole:"enchantement",icone:"💭"}),
-  lvl("ench_sugg_2","Suggestion II","suggestion",2,"","available",{ecole:"enchantement",icone:"💭"}),
-  lvl("ench_charme_1","Charme I","charme",1,"ench_sugg_1","locked",{ecole:"enchantement",icone:"💞",effets:"Cible neutre 1 tour"}),
-  lvl("ench_charme_2","Charme II","charme",2,"","locked",{ecole:"enchantement",icone:"💞"}),
-  lvl("ench_dom_1","Domination I","domination",1,"","locked",{ecole:"enchantement",icone:"👑",cout:5,description:"Prend le contrôle total d'une cible.",effets:"Contrôle total 1 tour"}),
-
-  // NÉCROMANCIE
-  lvl("nec_drain_0","Drain de vie 0","drain_de_vie",0,"","unlocked",{ecole:"necromancie",icone:"🩸",description:"Aspire l'énergie vitale de la cible.",effets:"Vole 10 PV à la cible"}),
-  lvl("nec_drain_1","Drain de vie I","drain_de_vie",1,"","unlocked",{ecole:"necromancie",icone:"🩸"}),
-  lvl("nec_drain_2","Drain de vie II","drain_de_vie",2,"","available",{ecole:"necromancie",icone:"🩸"}),
-  lvl("nec_rean_1","Réanimation I","reanimation",1,"nec_drain_1","locked",{ecole:"necromancie",icone:"💀",effets:"Invoque un mort-vivant (10 PV)"}),
-  lvl("nec_rean_2","Réanimation II","reanimation",2,"","locked",{ecole:"necromancie",icone:"💀"}),
-  lvl("nec_touch_1","Toucher de la mort I","toucher_de_la_mort",1,"","locked",{ecole:"necromancie",icone:"☠️",cout:5,description:"Dégâts nécrotiques massifs au contact.",effets:"Dégâts nécrotiques majeurs"}),
 ];
 
 /* ========================================================= */
