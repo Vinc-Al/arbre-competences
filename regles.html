@@ -6,6 +6,7 @@
 <title>Règles — Arpenteurs d'Icatia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <style>
   :root{
     --blood:#7a0d0d; --blood-bright:#b01818; --blood-glow:rgba(176,24,24,0.35);
@@ -81,6 +82,31 @@
   #preview.spell .pv-title{ color:#7fb0ff; }
 
   .empty-note{ color:var(--parch-dim); font-style:italic; }
+
+  /* ── Markdown enrichi ── */
+  .md-table{ width:100%; border-collapse:collapse; margin:0 0 18px; font-size:0.98rem;
+    border:1px solid var(--edge); border-radius:8px; overflow:hidden; }
+  .md-table th{ background:rgba(176,24,24,0.18); color:var(--gold); font-family:'Cinzel',serif;
+    font-size:0.82rem; letter-spacing:0.04em; text-align:left; padding:10px 14px; border-bottom:2px solid var(--blood); }
+  .md-table td{ padding:9px 14px; border-bottom:1px solid rgba(176,24,24,0.14); color:var(--parch); vertical-align:top; }
+  .md-table tr:last-child td{ border-bottom:none; }
+  .md-table tr:nth-child(even) td{ background:rgba(255,255,255,0.015); }
+
+  .md-img{ max-width:100%; height:auto; display:block; margin:10px auto 18px; border-radius:10px;
+    border:1px solid var(--edge); box-shadow:0 8px 30px rgba(0,0,0,0.5); }
+
+  .md-pre{ background:rgba(10,8,10,0.85); border:1px solid var(--edge); border-left:3px solid var(--blood-bright);
+    border-radius:8px; padding:14px 16px; overflow-x:auto; margin:0 0 16px; }
+  .md-pre code{ background:none; padding:0; color:#e9c9a0; font-family:ui-monospace,monospace; font-size:0.9rem; line-height:1.6; }
+
+  .md-hr{ border:none; height:1px; margin:26px 0; background:linear-gradient(90deg,transparent,var(--blood),transparent); }
+  .md-link{ color:#c98; text-decoration:none; border-bottom:1px solid rgba(201,150,120,0.4); }
+  .md-link:hover{ color:#e9c9a0; }
+  main ol{ margin:0 0 16px 22px; line-height:1.7; }
+  main del{ color:var(--parch-dim); }
+
+  .mermaid{ margin:8px 0 22px; text-align:center; background:rgba(10,8,10,0.4);
+    border:1px solid var(--edge); border-radius:10px; padding:16px; overflow-x:auto; }
   @media(max-width:820px){ aside{ display:none; } main{ padding:24px 20px 70px; } }
 </style>
 </head>
@@ -110,10 +136,10 @@
 <script>
 // ── Sections des règles (une entrée par grande section) ──
 const SECTIONS = [
-  { key:'generalites',     file:'regles/generalites.md',     label:'I · Généralités' },
-  { key:'caracteristiques',file:'regles/caracteristiques.md',label:'II · Caractéristiques' },
-  { key:'combat',          file:'regles/combat.md',          label:'III · Combat' },
-  { key:'puzzle',          file:'regles/puzzle.md',          label:'IV · Puzzle' },
+  { key:'generalites',     file:'generalites.md',     label:'I · Généralités' },
+  { key:'caracteristiques',file:'caracteristiques.md',label:'II · Caractéristiques' },
+  { key:'combat',          file:'combat.md',          label:'III · Combat' },
+  { key:'puzzle',          file:'puzzle.md',          label:'IV · Puzzle' },
 ];
 const cache = {};        // key -> markdown brut
 const headingIndex = {}; // terme (slug) -> { sectionKey, id, snippet }
@@ -121,35 +147,72 @@ const headingIndex = {}; // terme (slug) -> { sectionKey, id, snippet }
 function slug(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 
 // ── Markdown → HTML (léger, + liens [[ ]] et [ ]) ──
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function inline(s){
-  s = s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s = esc(s);
+  // images ![alt](url)
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (m,alt,url)=>`<img class="md-img" src="${url}" alt="${alt}" loading="lazy">`);
+  // liens standards [texte](url)
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (m,t,url)=>`<a class="md-link" href="${url}" target="_blank" rel="noopener">${t}</a>`);
+  // [[terme]] -> lien de règle
   s = s.replace(/\[\[([^\]]+)\]\]/g, (m,t)=>`<a class="rule-link" data-term="${t.trim()}">${t.trim()}</a>`);
+  // [ref] -> référence de sort (crochet simple, pas suivi de "(")
   s = s.replace(/\[([^\[\]]+)\](?!\()/g, (m,t)=>`<a class="spell-ref" data-ref="${t.trim()}">${t.trim()}</a>`);
+  // gras / italique / barré / code
   s = s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
-  s = s.replace(/\*([^*]+)\*/g,'<em>$1</em>');
+  s = s.replace(/(^|[^*])\*([^*]+)\*/g,'$1<em>$2</em>');
+  s = s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
   s = s.replace(/`([^`]+)`/g,'<code>$1</code>');
   return s;
 }
+function splitRow(line){ return line.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim()); }
+
 function mdToHtml(md){
   const lines = md.replace(/\r/g,'').split('\n');
-  let html=''; let para=[], list=[], quote=[];
+  let html=''; let i=0;
+  let para=[], ul=[], ol=[], quote=[];
   const fP=()=>{ if(para.length){ html+=`<p>${inline(para.join(' '))}</p>`; para=[]; } };
-  const fL=()=>{ if(list.length){ html+=`<ul>${list.map(li=>`<li>${inline(li)}</li>`).join('')}</ul>`; list=[]; } };
+  const fUL=()=>{ if(ul.length){ html+=`<ul>${ul.map(x=>`<li>${inline(x)}</li>`).join('')}</ul>`; ul=[]; } };
+  const fOL=()=>{ if(ol.length){ html+=`<ol>${ol.map(x=>`<li>${inline(x)}</li>`).join('')}</ol>`; ol=[]; } };
   const fQ=()=>{ if(quote.length){ html+=`<div class="formula">${quote.map(inline).join('<br>')}</div>`; quote=[]; } };
-  const fAll=()=>{ fP(); fL(); fQ(); };
-  for(const raw of lines){
-    const line=raw.replace(/\s+$/,''); let m;
-    if(!line.trim()){ fAll(); continue; }
-    if((m=line.match(/^(#{1,4})\s+(.*)/))){ fAll(); const lvl=m[1].length, txt=m[2].trim(); html+=`<h${lvl} id="${slug(txt)}">${inline(txt)}</h${lvl}>`; continue; }
-    if((m=line.match(/^>\s?(.*)/))){ fP(); fL(); quote.push(m[1]); continue; }
-    if((m=line.match(/^[-*]\s+(.*)/))){ fP(); fQ(); list.push(m[1]); continue; }
-    fL(); fQ(); para.push(line);
+  const fAll=()=>{ fP(); fUL(); fOL(); fQ(); };
+
+  while(i<lines.length){
+    const line = lines[i]; let m;
+    // bloc de code / mermaid (```)
+    if((m=line.match(/^```\s*([\w-]+)?\s*$/))){
+      fAll(); const lang=(m[1]||'').toLowerCase(); const buf=[]; i++;
+      while(i<lines.length && !/^```\s*$/.test(lines[i])){ buf.push(lines[i]); i++; }
+      i++;
+      if(lang==='mermaid') html+=`<div class="mermaid">${esc(buf.join('\n'))}</div>`;
+      else html+=`<pre class="md-pre"><code>${esc(buf.join('\n'))}</code></pre>`;
+      continue;
+    }
+    // tableau : ligne | ... | suivie d'une ligne de séparation |---|
+    if(/^\s*\|.*\|\s*$/.test(line) && i+1<lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i+1])){
+      fAll(); const header = splitRow(line); i+=2; const rows=[];
+      while(i<lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){ rows.push(splitRow(lines[i])); i++; }
+      html+=`<table class="md-table"><thead><tr>${header.map(h=>`<th>${inline(h)}</th>`).join('')}</tr></thead><tbody>`
+        + rows.map(r=>`<tr>${r.map(c=>`<td>${inline(c)}</td>`).join('')}</tr>`).join('') + `</tbody></table>`;
+      continue;
+    }
+    if(!line.trim()){ fAll(); i++; continue; }
+    // trait horizontal
+    if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)){ fAll(); html+='<hr class="md-hr">'; i++; continue; }
+    // titre
+    if((m=line.match(/^(#{1,4})\s+(.*)/))){ fAll(); const lvl=m[1].length, txt=m[2].trim(); html+=`<h${lvl} id="${slug(txt)}">${inline(txt)}</h${lvl}>`; i++; continue; }
+    // citation / formule
+    if((m=line.match(/^>\s?(.*)/))){ fP(); fUL(); fOL(); quote.push(m[1]); i++; continue; }
+    // liste numérotée
+    if((m=line.match(/^\s*\d+[.)]\s+(.*)/))){ fP(); fUL(); fQ(); ol.push(m[1]); i++; continue; }
+    // liste à puces
+    if((m=line.match(/^\s*[-*+]\s+(.*)/))){ fP(); fOL(); fQ(); ul.push(m[1]); i++; continue; }
+    // paragraphe
+    fUL(); fOL(); fQ(); para.push(line); i++;
   }
   fAll();
   return html;
 }
-
-// ── Index des titres (pour la prévisu des [[ ]]) ──
 function indexHeadings(key, md){
   const lines = md.replace(/\r/g,'').split('\n');
   for(let i=0;i<lines.length;i++){
@@ -190,6 +253,7 @@ async function loadSection(key, anchor){
   document.getElementById('content').innerHTML = mdToHtml(md);
   buildTOC(key);
   wireLinks();
+  renderMermaid();
   const el = anchor && document.getElementById(anchor);
   if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
   else window.scrollTo({top:0, behavior:'smooth'});
@@ -227,6 +291,18 @@ function showPreview(el, html, isSpell){
   p.style.left = Math.max(8,left)+'px'; p.style.top = Math.max(8,top)+'px';
 }
 function hidePreview(){ preview().style.display='none'; }
+
+let _mermaidInit=false;
+function renderMermaid(){
+  if(!window.mermaid) return;
+  if(!_mermaidInit){
+    try{ window.mermaid.initialize({ startOnLoad:false, theme:'dark', securityLevel:'loose',
+      themeVariables:{ primaryColor:'#1a1012', primaryBorderColor:'#b01818', lineColor:'#b8a', fontFamily:'EB Garamond, serif' } }); }catch(e){}
+    _mermaidInit=true;
+  }
+  const nodes = document.querySelectorAll('#content .mermaid');
+  if(nodes.length){ try{ window.mermaid.run({ nodes }); }catch(e){ console.warn('Mermaid:', e); } }
+}
 
 function wireLinks(){
   document.querySelectorAll('#content .rule-link').forEach(a=>{

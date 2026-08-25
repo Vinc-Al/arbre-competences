@@ -29,6 +29,18 @@ Toutes les actions qu'une créature effectue prennent l'ensemble du tour (enviro
 Quelques exemples d'actions : une attaque au corps à corps, à distance ou le lancement d'un sortilège ; se préparer à sprinter ; lancer un objet ; s'équiper de son arme ; s'accroupir ; aider une autre créature ; consommer un objet ; se mettre en état de posture ou d'incantation.
 
 ### Actions offensives simples — Corps à corps / Attaque à distance
+
+```mermaid
+flowchart TD
+  A[Attaquant : Precision offensive] --> B{1d100 inferieur au seuil ?}
+  B -->|Oui, touche| C[Defenseur : Blocage ou Esquive]
+  B -->|Non| D[Echec : le projectile devie]
+  C --> E{Reussite defense ?}
+  E -->|Blocage| F[Degats reduits selon resistances]
+  E -->|Esquive| G[Aucun degat subi]
+  E -->|Echec| H[Degats appliques]
+```
+
 Lors d'une attaque d'une créature sur une autre, la réussite se détermine ainsi :
 
 1. La créature attaquante effectue un jet de **précision offensive** : `1d100 < SEUIL_FICHE`.
@@ -83,3 +95,14 @@ Certaines réussites critiques ou d'habileté appliquent un **effet de statut** 
 
 ### Manœuvres
 Les manœuvres sont des actions particulières liées à la progression martiale d'une arme ou d'un arbre général. Elles ont différentes caractéristiques : nom, description, effet, ressource d'action, temps de recharge, coût énergétique, et embranchement (« évolution de »).
+
+
+| Caractéristique | Description |
+|---|---|
+| Nom de la manœuvre | Le nom affiché |
+| Description | Ce que fait la manœuvre |
+| Effet | L'effet mécanique appliqué |
+| Ressource d'Action | Action, réaction, gratuite… |
+| Temps de recharge | Nombre de tours |
+| Coût énergétique | Énergie dépensée |
+| Embranchement | « Évolution de » (prérequis) |
