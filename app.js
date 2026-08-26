@@ -2767,6 +2767,55 @@ function normEtat(e){
   return v || 'locked';   // conserve unlocked / available / locked existants
 }
 
+// ── MODÈLE nœud = modificateurs ──────────────────────────────────────────────
+// Lit une cellule de stat : base absolue ("10"), incrément signé ("+2") ou texte
+// ("5d8", "Instantané"). La notation de dé n'est jamais un incrément.
+function statCell(raw){
+  const s = String(raw==null?'':raw).trim();
+  if(!s) return null;
+  if(/\dd\d/i.test(s.replace(/\s/g,''))) return { kind:'text', raw:s };   // 5d8, 1d6…
+  const m = s.match(/^([+-]?)\s*(\d+(?:[.,]\d+)?)\s*(.*)$/);
+  if(!m) return { kind:'text', raw:s };
+  const n = parseFloat(m[2].replace(',','.'));
+  if(Number.isNaN(n)) return { kind:'text', raw:s };
+  return { kind: m[1] ? 'incr' : 'base', n: m[1]==='-' ? -n : n, unit: m[3].trim() };
+}
+// Remonte la chaîne d'ascendance d'un nœud dans son pool (sorts ou maîtrise).
+function ancestorChainOf(node){
+  const pool = (typeof masterySkills !== 'undefined' && masterySkills.indexOf(node) >= 0)
+    ? masterySkills : allSkills;
+  const byId = {}; pool.forEach(s => byId[s.id] = s);
+  const chain = [], seen = new Set(); let frontier = [node.id];
+  while(frontier.length){
+    const next = [];
+    for(const id of frontier){
+      if(seen.has(id)) continue; seen.add(id);
+      const n = byId[id]; if(!n) continue; chain.push(n);
+      parseParentIds(n.parent_id).ids.forEach(p => next.push(p));
+    }
+    frontier = next;
+  }
+  return chain;
+}
+// Calcule une stat : base absolue de la chaîne (sinon forfait) + Σ des incréments
+// des ancêtres APPRIS (+ le nœud cliqué). En MJ, collecte le potentiel non pris.
+function computeChainStat(node, keys, mj){
+  const keyList = Array.isArray(keys) ? keys : [keys];
+  const cellOf = n => { for(const k of keyList){ const c = statCell(n[k]); if(c) return c; } return null; };
+  let base = null, bonus = 0, unit = '', possibles = [];
+  for(const n of ancestorChainOf(node)){
+    const c = cellOf(n); if(!c || c.kind === 'text') continue;
+    if(c.unit) unit = c.unit;
+    if(c.kind === 'base'){ base = c.n; }                 // base : toujours (intrinsèque)
+    else {                                                // incrément : seulement si appris
+      const owned = (n.id === node.id) || (n.etat === 'unlocked');
+      if(owned) bonus += c.n; else if(mj) possibles.push(c.n);
+    }
+  }
+  if(base === null && BASE_STATS_FORFAIT[keyList[0]] !== undefined) base = BASE_STATS_FORFAIT[keyList[0]];
+  return { base, bonus, total: (base || 0) + bonus, unit, possibles, hasBase: base !== null };
+}
+
 const STAT_DEFS = [
   { keys: ['action', 'type_action'], label: 'Type d\'action' },
   { keys: ['duree_incant', 'duree_incantation', 'temps_incant'], label: 'Durée d\'incantation' },
@@ -2846,23 +2895,29 @@ function buildFicheBody(d){
   //    Pour les stats AMÉLIORABLES (précision, dégâts), on affiche BASE + BONUS.
   //    Les BASE sont FORFAITAIRES pour l'instant (voir BASE_STATS_FORFAIT) —
   //    on les branchera plus tard sur le classeur "stats" de la fiche joueur.
-  const fmtStat = (key, raw) => {
-    const base = BASE_STATS_FORFAIT[key];
-    if(base === undefined) return parseRichText(raw);         // stat non améliorable → direct
-    const bonus = raw.trim();
-    const sign = bonus.startsWith('-') ? '−' : '+';
-    const body = bonus.replace(/^[+-]\s*/, '');               // valeur sans le signe
-    const pure = bonus.replace(/\s/g, '');
-    if(typeof base === 'number' && /^[+-]?\d+(\.\d+)?$/.test(pure)){
-      return `${base} ${sign} ${body} <span class="stat-total">= ${base + parseFloat(pure)}</span>`;
+  const fmtStat = (defKeys, raw) => {
+    const own = statCell(raw);
+    if(!own || own.kind === 'text') return parseRichText(raw);   // dé / texte → brut
+    const res = computeChainStat(d, defKeys, isMjMode);
+    const signed = n => (n < 0 ? '−' : '+') + Math.abs(n);
+    let out;
+    if(res.hasBase){
+      out = `${res.base}`;
+      if(res.bonus) out += ` ${res.bonus < 0 ? '−' : '+'} ${Math.abs(res.bonus)} <span class="stat-total">= ${res.total}</span>`;
+    } else {
+      out = signed(res.bonus || own.n);                          // que des incréments
     }
-    return `${base} ${sign} ${parseRichText(body)}`;           // % ou unité → on garde la formule
+    if(res.unit) out += ' ' + res.unit;
+    if(isMjMode && res.possibles.length){
+      out += ` <span class="stat-potentiel">(potentiel : ${res.possibles.map(signed).join(', ')})</span>`;
+    }
+    return out;
   };
   const statLines = STAT_DEFS
     .filter(s => statVal(s).trim())
     .map(s => {
-      const key = s.key || (s.keys && s.keys[0]);
-      return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${fmtStat(key, statVal(s))}</div>`;
+      const keys = s.keys || [s.key];
+      return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${s.label} :</span> ${fmtStat(keys, statVal(s))}</div>`;
     })
     .join('');
 

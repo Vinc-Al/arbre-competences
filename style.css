@@ -1025,3 +1025,4 @@ body.mode-mastery .node .node-label{ transform:rotate(-45deg); }
   background:rgba(18,13,24,0.92); padding:1px 9px; border-radius:999px;
   border:1px solid var(--alt-b);
 }
+.stat-potentiel{ color:#c9b0f2; font-size:0.86em; font-style:italic; }
