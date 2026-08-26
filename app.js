@@ -2780,18 +2780,26 @@ function statCell(raw){
   if(Number.isNaN(n)) return { kind:'text', raw:s };
   return { kind: m[1] ? 'incr' : 'base', n: m[1]==='-' ? -n : n, unit: m[3].trim() };
 }
-// Remonte la chaîne d'ascendance d'un nœud dans son pool (sorts ou maîtrise).
+// Famille d'un id : le préfixe SANS le rang final (evo_te_2a → "evo_te").
+// Les incréments ne se propagent qu'à l'intérieur d'une même famille.
+function familyOf(id){ return String(id==null?'':id).replace(/_?\d+[a-z]*$/, ''); }
+
+// Remonte la chaîne d'ascendance d'un nœud, EN RESTANT dans sa famille.
+// Un parent inter-familles (convergence) est un prérequis, pas un ancêtre de stat.
 function ancestorChainOf(node){
   const pool = (typeof masterySkills !== 'undefined' && masterySkills.indexOf(node) >= 0)
     ? masterySkills : allSkills;
   const byId = {}; pool.forEach(s => byId[s.id] = s);
+  const fam = familyOf(node.id);
   const chain = [], seen = new Set(); let frontier = [node.id];
   while(frontier.length){
     const next = [];
     for(const id of frontier){
       if(seen.has(id)) continue; seen.add(id);
       const n = byId[id]; if(!n) continue; chain.push(n);
-      parseParentIds(n.parent_id).ids.forEach(p => next.push(p));
+      parseParentIds(n.parent_id).ids.forEach(p => {
+        if(familyOf(p) === fam) next.push(p);            // ← même famille uniquement
+      });
     }
     frontier = next;
   }
