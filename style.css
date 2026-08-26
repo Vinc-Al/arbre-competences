@@ -1010,3 +1010,18 @@ body.mode-mastery .node .node-label{ transform:rotate(-45deg); }
 
 /* Total calculé d'une stat BASE + BONUS */
 .stat-total{ color:var(--gold,#d4af6a); font-weight:600; }
+
+/* ── Groupes d'alternatives : halo « 1 parmi N » (teinte CHOIX = violet) ──────
+   Pour changer la couleur : édite --alt (fond) et --alt-b (bordure) ci-dessous. */
+.alt-halo{
+  --alt: rgba(150,110,220,0.10);
+  --alt-b: rgba(160,120,230,0.45);
+  position:absolute; z-index:1; pointer-events:none;
+  border-radius:16px; background:var(--alt); border:1px dashed var(--alt-b);
+}
+.alt-tag{
+  position:absolute; top:-11px; left:14px;
+  font-size:0.66rem; letter-spacing:0.05em; color:#c9b0f2;
+  background:rgba(18,13,24,0.92); padding:1px 9px; border-radius:999px;
+  border:1px solid var(--alt-b);
+}

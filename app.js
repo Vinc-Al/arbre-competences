@@ -392,6 +392,8 @@ async function loadData(){
   }
 
   if(skillsLoaded){ allSkills = loadedSkills; }
+  // Nouvelle convention : etat peut être TRUE/FALSE → on normalise (sans casser l'ancien).
+  allSkills.forEach(s => { s.etat = normEtat(s.etat); });
   if(!skillsLoaded){
     allSkills = DEMO_DATA;
     statusEl.textContent = 'Mode démonstration — Sheet DATA non configuré';
@@ -1721,6 +1723,17 @@ function savePlayerChoices(){
   }, 800);
 }
 
+// Détecte les groupes d'alternatives : ids ne différant que par la LETTRE finale
+// après un chiffre (te_2a, te_2b…). Clé de groupe = l'id sans la lettre (te_2).
+function detectAltGroups(skills){
+  const g = {};
+  skills.forEach(s => {
+    const m = String(s.id).match(/^(.+\d)([a-z])$/);
+    if(m){ (g[m[1]] = g[m[1]] || []).push(s.id); }
+  });
+  return Object.keys(g).filter(k => g[k].length >= 2).map(k => ({ key: k, ids: g[k] }));
+}
+
 function currentSkills(){
   // Dédoublonnage par id : un id en double (erreur de saisie) ne doit pas
   // consommer une colonne en trop ni casser la hiérarchie.
@@ -1739,6 +1752,16 @@ function currentSkills(){
   // Mode joueur : masquer les sorts verrouillés (seuls unlocked et available sont visibles)
   if(!isMjMode){
     skills = skills.filter(s => s.etat === 'unlocked' || s.etat === 'available');
+    // Réduction des alternatives : si un choix est fait dans un groupe (un membre
+    // unlocked), on masque les autres membres. Sinon on les laisse (choix en attente).
+    const byId = {}; skills.forEach(s => byId[s.id] = s);
+    detectAltGroups(skills).forEach(grp => {
+      const chosen = grp.ids.filter(id => byId[id] && byId[id].etat === 'unlocked');
+      if(chosen.length){
+        const keep = new Set(chosen);
+        skills = skills.filter(s => !grp.ids.includes(s.id) || keep.has(s.id));
+      }
+    });
   }
   return dedupe(skills);
 }
@@ -2309,6 +2332,24 @@ function renderTree(){
     });
   }
 
+  // Halos des groupes d'alternatives (« 1 parmi N »). Dessinés AVANT les nœuds
+  // → derrière eux. En mode joueur réduit, il ne reste qu'un membre → pas de halo.
+  detectAltGroups(skills).forEach(grp => {
+    const pts = grp.ids.map(id => positions[id]).filter(Boolean);
+    if(pts.length < 2) return;
+    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+    const pad = 36;
+    const x = Math.min(...xs) - pad, y = Math.min(...ys) - pad;
+    const w = (Math.max(...xs) - Math.min(...xs)) + pad * 2;
+    const h = (Math.max(...ys) - Math.min(...ys)) + pad * 2;
+    const halo = document.createElement('div');
+    halo.className = 'alt-halo';
+    halo.style.left = x + 'px'; halo.style.top = y + 'px';
+    halo.style.width = w + 'px'; halo.style.height = h + 'px';
+    halo.innerHTML = `<span class="alt-tag">1 parmi ${pts.length}</span>`;
+    canvas.appendChild(halo);
+  });
+
   // draw nodes
   skills.forEach(s => {
     const pos = positions[s.id];
@@ -2690,15 +2731,57 @@ const BASE_STATS_FORFAIT = {
   degats: 0,       // Base de dégâts (souvent un dé côté sort/arme ; 0 par défaut)
 };
 
+// Référentiel des NOMS et UNITÉS corrects — sert à normaliser les clés de formes
+// (ancien format "cle:±valeur", clés parfois mal orthographiées/accentuées) vers
+// un affichage propre. La clé est normalisée (minuscules, sans accents).
+const STAT_META = {
+  precision:         { label: 'Précision',            unit: '' },
+  degats:            { label: 'Dégâts',               unit: '' },
+  degats_duree:      { label: 'Dégâts sur la durée',  unit: '' },
+  soins:             { label: 'Soins',                unit: '' },
+  soins_duree:       { label: 'Soins sur la durée',   unit: '' },
+  portee:            { label: 'Portée',               unit: ' m' },
+  zone:              { label: 'Zone',                 unit: ' m²' },
+  nombre_projectile: { label: 'Nb de projectiles',    unit: '' },
+  cout_nrj:          { label: 'Coût énergétique',     unit: '' },
+  temps_de_recharge: { label: 'Temps de recharge',    unit: '' },
+  bloc_phys:         { label: 'Blocage physique',     unit: '' },
+  bloc_mag:          { label: 'Blocage magique',      unit: '' },
+  esquive:           { label: 'Esquive',              unit: '' },
+  duree:             { label: 'Durée',                unit: '' },
+  duree_incant:      { label: "Durée d'incantation",  unit: '' },
+  action:            { label: "Type d'action",        unit: '' },
+};
+// Normalise une clé de forme : minuscules, sans accents, "equive"→"esquive"
+function normKey(k){
+  let n = String(k||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  if(n === 'equive') n = 'esquive';                 // faute fréquente dans les données
+  return n;
+}
+// Normalise l'état : accepte la nouvelle convention TRUE/FALSE ET les anciens
+// libellés (unlocked/available/locked) pour ne rien casser.
+function normEtat(e){
+  const v = String(e==null?'':e).trim().toLowerCase();
+  if(v === 'true'  || v === 'vrai' || v === '1' || v === 'oui') return 'unlocked';
+  if(v === 'false' || v === 'faux' || v === '0' || v === 'non') return 'locked';
+  return v || 'locked';   // conserve unlocked / available / locked existants
+}
+
 const STAT_DEFS = [
   { keys: ['action', 'type_action'], label: 'Type d\'action' },
   { keys: ['duree_incant', 'duree_incantation', 'temps_incant'], label: 'Durée d\'incantation' },
   { keys: ['cout_nrj', 'cout_energie', 'cout_energetique'], label: 'Coût énergétique' },
   { key: 'degats', label: 'Dégâts' },
   { keys: ['degats_duree', 'degats_dot'], label: 'Dégâts sur la durée' },
+  { keys: ['soins'], label: 'Soins' },
+  { keys: ['soins_duree'], label: 'Soins sur la durée' },
   { key: 'precision', label: 'Précision' },
+  { keys: ['nombre_projectile', 'nb_projectile'], label: 'Nb de projectiles' },
   { key: 'portee', label: 'Portée' },
   { key: 'zone', label: 'Zone' },
+  { keys: ['bloc_phys', 'blocage_physique'], label: 'Blocage physique' },
+  { keys: ['bloc_mag', 'blocage_magique'], label: 'Blocage magique' },
+  { keys: ['esquive', 'equive'], label: 'Esquive' },
   { key: 'duree',  label: 'Durée' },
   { keys: ['need', 'necessite'], label: 'Nécessite' },
   { keys: ['school'], label: 'École' },
@@ -2824,10 +2907,19 @@ function buildFicheBody(d){
   let formeHtml = '';
   if(formes.length){
     const lines = formes.map(f => {
-      const m = f.match(/^([^:]+):\s*([+-].*)$/);
+      const m = f.match(/^([^:]+):\s*(.+)$/);
       if(m){
+        const meta = STAT_META[normKey(m[1])];
+        // valeur : on isole signe + nombre, on retire une unité parasite dans la donnée
+        const raw = m[2].trim();
+        const nm = raw.match(/^([+-]?\s*[\d.,]+)/);
+        const num = nm ? nm[1].replace(/\s/g,'') : raw;
+        if(meta){
+          return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${meta.label} :</span> ${num}${meta.unit}</div>`;
+        }
+        // clé inconnue : on garde tel quel (nom capitalisé, valeur brute)
         const cle = m[1].trim();
-        return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${cle.charAt(0).toUpperCase()+cle.slice(1)} :</span> ${m[2].trim()}</div>`;
+        return `<div class="rank-stat-line"><span class="arrow">→</span><span class="stat-label">${cle.charAt(0).toUpperCase()+cle.slice(1)} :</span> ${raw}</div>`;
       }
       return `<div class="rank-special">${parseRichText(f)}</div>`;   // évolution non générique
     }).join('');
