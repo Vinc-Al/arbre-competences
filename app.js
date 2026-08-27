@@ -1953,6 +1953,13 @@ function buildLayout(skills){
     ids.forEach((id, i) => { xslot[id] = center + (i - (n-1)/2); });  // étalés d'1 créneau
   });
 
+  // Sous-arbres des convergents : si un convergent a des enfants (non-convergents),
+  // on leur alloue des COLONNES PROPRES via assignX (le cursor global garantit
+  // l'absence de chevauchement). Le convergent se recale au milieu de ses enfants.
+  Object.values(convGroups).forEach(({ ids }) => ids.forEach(id => {
+    if((primChildren[id] || []).length){ cursor += 1; assignX(id); }
+  }));
+
   // Filet de sécurité : tout nœud non encore positionné (ex. enfant d'un
   // convergent) se cale sous son 1er parent.
   skills.forEach(s => {
@@ -2740,9 +2747,10 @@ const STAT_META = {
   degats_duree:      { label: 'Dégâts sur la durée',  unit: '' },
   soins:             { label: 'Soins',                unit: '' },
   soins_duree:       { label: 'Soins sur la durée',   unit: '' },
-  portee:            { label: 'Portée',               unit: ' m' },
-  zone:              { label: 'Zone',                 unit: ' m²' },
+  portee:            { label: 'Portée',               unit: 'm' },
+  zone:              { label: 'Zone',                 unit: 'm²' },
   nombre_projectile: { label: 'Nb de projectiles',    unit: '' },
+  rebond:            { label: 'Rebonds',              unit: '' },
   cout_nrj:          { label: 'Coût énergétique',     unit: '' },
   temps_de_recharge: { label: 'Temps de recharge',    unit: '' },
   bloc_phys:         { label: 'Blocage physique',     unit: '' },
@@ -2778,7 +2786,7 @@ function statCell(raw){
   if(!m) return { kind:'text', raw:s };
   const n = parseFloat(m[2].replace(',','.'));
   if(Number.isNaN(n)) return { kind:'text', raw:s };
-  return { kind: m[1] ? 'incr' : 'base', n: m[1]==='-' ? -n : n, unit: m[3].trim() };
+  return { kind:'num', n: m[1]==='-' ? -n : n, unit: m[3].trim() };       // valeur signée
 }
 // Famille d'un id : le préfixe SANS le rang final (evo_te_2a → "evo_te").
 // Les incréments ne se propagent qu'à l'intérieur d'une même famille.
@@ -2809,13 +2817,19 @@ function ancestorChainOf(node){
 // des ancêtres APPRIS (+ le nœud cliqué). En MJ, collecte le potentiel non pris.
 function computeChainStat(node, keys, mj){
   const keyList = Array.isArray(keys) ? keys : [keys];
+  const pool = (typeof masterySkills !== 'undefined' && masterySkills.indexOf(node) >= 0)
+    ? masterySkills : allSkills;
+  const byId = {}; pool.forEach(s => byId[s.id] = s);
+  const fam = familyOf(node.id);
+  // racine de famille = aucun parent de la même famille (le parent est cross-famille ou absent)
+  const isFamilyRoot = n => !parseParentIds(n.parent_id).ids.some(p => byId[p] && familyOf(p) === fam);
   const cellOf = n => { for(const k of keyList){ const c = statCell(n[k]); if(c) return c; } return null; };
   let base = null, bonus = 0, unit = '', possibles = [];
   for(const n of ancestorChainOf(node)){
     const c = cellOf(n); if(!c || c.kind === 'text') continue;
     if(c.unit) unit = c.unit;
-    if(c.kind === 'base'){ base = c.n; }                 // base : toujours (intrinsèque)
-    else {                                                // incrément : seulement si appris
+    if(isFamilyRoot(n)){ base = c.n; }                   // POSITION : racine → base
+    else {                                                // descendant → incrément (si appris)
       const owned = (n.id === node.id) || (n.etat === 'unlocked');
       if(owned) bonus += c.n; else if(mj) possibles.push(c.n);
     }
@@ -2834,6 +2848,7 @@ const STAT_DEFS = [
   { keys: ['soins_duree'], label: 'Soins sur la durée' },
   { key: 'precision', label: 'Précision' },
   { keys: ['nombre_projectile', 'nb_projectile'], label: 'Nb de projectiles' },
+  { keys: ['rebond', 'rebonds'], label: 'Rebonds' },
   { key: 'portee', label: 'Portée' },
   { key: 'zone', label: 'Zone' },
   { keys: ['bloc_phys', 'blocage_physique'], label: 'Blocage physique' },
@@ -2907,6 +2922,8 @@ function buildFicheBody(d){
     const own = statCell(raw);
     if(!own || own.kind === 'text') return parseRichText(raw);   // dé / texte → brut
     const res = computeChainStat(d, defKeys, isMjMode);
+    const meta = STAT_META[normKey(Array.isArray(defKeys) ? defKeys[0] : defKeys)];
+    const unit = ((res.unit || (meta && meta.unit) || '')).trim();
     const signed = n => (n < 0 ? '−' : '+') + Math.abs(n);
     let out;
     if(res.hasBase){
@@ -2915,7 +2932,7 @@ function buildFicheBody(d){
     } else {
       out = signed(res.bonus || own.n);                          // que des incréments
     }
-    if(res.unit) out += ' ' + res.unit;
+    if(unit) out += ' ' + unit;
     if(isMjMode && res.possibles.length){
       out += ` <span class="stat-potentiel">(potentiel : ${res.possibles.map(signed).join(', ')})</span>`;
     }
