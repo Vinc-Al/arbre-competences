@@ -1903,14 +1903,28 @@ function buildLayout(skills){
   const { parseP, firstParentOf, byId } = H;
   const isConv = id => (H.parentsOf[id] || []).length >= 2;
 
-  // Arbre PRIMAIRE : enfants par 1er parent, en EXCLUANT les nœuds convergents.
-  // (Un convergent ne doit pas tirer le barycentre de son parent : il est posé
-  //  à part, entre ses parents.)
+  // Arbre PRIMAIRE couvrant : CHAQUE nœud reçoit UN parent primaire. Pour les
+  // nœuds convergents (≥2 parents), on DISTRIBUE le parent primaire en round-robin
+  // sur le jeu de parents partagé → le treillis s'aligne en colonnes au lieu de
+  // s'empiler sous le 1er parent. Les liens de convergence en trop sont dessinés
+  // par-dessus (renderTree relie chaque nœud à TOUS ses parents).
+  const primParent = {};
+  const convGroups = {};
+  skills.forEach(s => {
+    const ps = parseP(s.parent_id).filter(p => byId[p]);
+    if(ps.length <= 1){ primParent[s.id] = ps[0] || null; return; }
+    const key = ps.slice().sort().join('|');
+    (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
+  });
+  Object.values(convGroups).forEach(({ ps, ids }) => {
+    ids.slice().sort((a, b) => a.localeCompare(b))
+      .forEach((id, i) => { primParent[id] = ps[i % ps.length]; });   // distribution
+  });
+
   const primChildren = {}, primRoots = [];
   skills.forEach(s => {
-    if(isConv(s.id)) return;
-    const p = firstParentOf[s.id];
-    if(p) (primChildren[p] = primChildren[p] || []).push(s.id);
+    const p = primParent[s.id];
+    if(p && byId[p]) (primChildren[p] = primChildren[p] || []).push(s.id);
     else primRoots.push(s.id);
   });
 
@@ -1936,29 +1950,33 @@ function buildLayout(skills){
   // graphiques nettes (chaque arme dans sa propre bande de colonnes).
   primRoots.forEach((r, i) => { if(i > 0) cursor += 1; assignX(r); });
 
-  // Nœuds CONVERGENTS : groupés par jeu de parents, étalés autour de la médiane
-  // de l'étendue de leurs parents (min+max)/2. Placés APRÈS l'arbre primaire.
-  const convGroups = {};
-  skills.forEach(s => {
-    if(!isConv(s.id)) return;
-    const ps = parseP(s.parent_id);
-    const key = ps.slice().sort().join('|');
-    (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
-  });
-  Object.values(convGroups).forEach(({ ps, ids }) => {
-    const pxs = ps.map(p => xslot[p]).filter(x => x != null);
-    if(!pxs.length){ ids.forEach(id => xslot[id] = cursor++); return; }
-    const center = (Math.min(...pxs) + Math.max(...pxs)) / 2;
-    const n = ids.length;
-    ids.forEach((id, i) => { xslot[id] = center + (i - (n-1)/2); });  // étalés d'1 créneau
-  });
-
-  // Sous-arbres des convergents : si un convergent a des enfants (non-convergents),
-  // on leur alloue des COLONNES PROPRES via assignX (le cursor global garantit
-  // l'absence de chevauchement). Le convergent se recale au milieu de ses enfants.
-  Object.values(convGroups).forEach(({ ids }) => ids.forEach(id => {
-    if((primChildren[id] || []).length){ cursor += 1; assignX(id); }
-  }));
+  // ── COMPACTION PAR BARYCENTRE EN COUCHES ──────────────────────────────────
+  // assignX donne un ordre initial ; on tire ensuite chaque nœud vers la moyenne
+  // des x de ses parents (passe descendante) puis de ses enfants (passe montante),
+  // en re-tassant chaque couche (niveau) sans chevauchement. Résultat : compact,
+  // treillis aligné, liens courts.
+  const layers = {};
+  skills.forEach(s => { const L = +s.niveau || 0; (layers[L] = layers[L] || []).push(s.id); });
+  const layerKeys = Object.keys(layers).map(Number).sort((a, b) => a - b);
+  const childrenAll = {};
+  skills.forEach(s => parseP(s.parent_id).forEach(p => { if(byId[p]) (childrenAll[p] = childrenAll[p] || []).push(s.id); }));
+  const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const MIN_SLOT = 1;
+  function packLayer(ids, desired){
+    const arr = ids.map(id => ({ id, d: desired(id) })).sort((a, b) => a.d - b.d);
+    let prev = -Infinity;
+    arr.forEach(o => { const x = Math.max(o.d, prev + MIN_SLOT); xslot[o.id] = x; prev = x; });
+  }
+  for(let it = 0; it < 6; it++){
+    layerKeys.forEach(L => packLayer(layers[L], id => {
+      const px = parseP(byId[id].parent_id).map(p => xslot[p]).filter(x => x != null);
+      return px.length ? avg(px) : (xslot[id] || 0);
+    }));
+    layerKeys.slice().reverse().forEach(L => packLayer(layers[L], id => {
+      const cx = (childrenAll[id] || []).map(c => xslot[c]).filter(x => x != null);
+      return cx.length ? avg(cx) : (xslot[id] || 0);
+    }));
+  }
 
   // Filet de sécurité : tout nœud non encore positionné (ex. enfant d'un
   // convergent) se cale sous son 1er parent.
