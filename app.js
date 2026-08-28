@@ -1909,16 +1909,24 @@ function buildLayout(skills){
   // s'empiler sous le 1er parent. Les liens de convergence en trop sont dessinés
   // par-dessus (renderTree relie chaque nœud à TOUS ses parents).
   const primParent = {};
-  const convGroups = {};
+  const childCount = {};
+  // Convergents traités par niveau croissant : chacun rejoint le parent (de son jeu
+  // partagé) le MOINS chargé → répartition homogène, pas de chaîne qui gonfle.
+  skills.slice()
+    .filter(s => parseP(s.parent_id).filter(p => byId[p]).length >= 2)
+    .sort((a, b) => ((+a.niveau || 0) - (+b.niveau || 0)) || a.id.localeCompare(b.id))
+    .forEach(s => {
+      const ps = parseP(s.parent_id).filter(p => byId[p]);
+      let best = ps[0], bc = childCount[best] || 0;
+      ps.forEach(p => { const c = childCount[p] || 0; if(c < bc){ bc = c; best = p; } });
+      primParent[s.id] = best; childCount[best] = (childCount[best] || 0) + 1;
+    });
+  // Nœuds simples (0 ou 1 parent) : parent unique.
   skills.forEach(s => {
+    if(primParent[s.id] !== undefined) return;
     const ps = parseP(s.parent_id).filter(p => byId[p]);
-    if(ps.length <= 1){ primParent[s.id] = ps[0] || null; return; }
-    const key = ps.slice().sort().join('|');
-    (convGroups[key] = convGroups[key] || { ps, ids: [] }).ids.push(s.id);
-  });
-  Object.values(convGroups).forEach(({ ps, ids }) => {
-    ids.slice().sort((a, b) => a.localeCompare(b))
-      .forEach((id, i) => { primParent[id] = ps[i % ps.length]; });   // distribution
+    primParent[s.id] = ps[0] || null;
+    if(ps[0]) childCount[ps[0]] = (childCount[ps[0]] || 0) + 1;
   });
 
   const primChildren = {}, primRoots = [];
@@ -1950,11 +1958,10 @@ function buildLayout(skills){
   // graphiques nettes (chaque arme dans sa propre bande de colonnes).
   primRoots.forEach((r, i) => { if(i > 0) cursor += 1; assignX(r); });
 
-  // ── COMPACTION PAR BARYCENTRE EN COUCHES ──────────────────────────────────
-  // assignX donne un ordre initial ; on tire ensuite chaque nœud vers la moyenne
-  // des x de ses parents (passe descendante) puis de ses enfants (passe montante),
-  // en re-tassant chaque couche (niveau) sans chevauchement. Résultat : compact,
-  // treillis aligné, liens courts.
+  // ── COMPACTION PAR BARYCENTRE EN COUCHES (blocs centrés) ──────────────────
+  // Ordre initial = assignX. On tire chaque nœud vers la moyenne des x de ses
+  // enfants (+ centre de ses parents s'il est CONVERGENT, pour aligner le treillis),
+  // en re-tassant chaque rangée par BLOCS CENTRÉS (étalement symétrique, sans dérive).
   const layers = {};
   skills.forEach(s => { const L = +s.niveau || 0; (layers[L] = layers[L] || []).push(s.id); });
   const layerKeys = Object.keys(layers).map(Number).sort((a, b) => a - b);
@@ -1964,17 +1971,36 @@ function buildLayout(skills){
   const MIN_SLOT = 1;
   function packLayer(ids, desired){
     const arr = ids.map(id => ({ id, d: desired(id) })).sort((a, b) => a.d - b.d);
-    let prev = -Infinity;
-    arr.forEach(o => { const x = Math.max(o.d, prev + MIN_SLOT); xslot[o.id] = x; prev = x; });
+    let blocks = arr.map(o => ({ items: [o], sumD: o.d, n: 1, x: o.d }));
+    let merged = true;
+    while(merged){
+      merged = false;
+      for(let i = 0; i < blocks.length - 1; i++){
+        const a = blocks[i], b = blocks[i + 1];
+        const aRight = a.x + (a.n - 1) / 2 * MIN_SLOT;
+        const bLeft  = b.x - (b.n - 1) / 2 * MIN_SLOT;
+        if(bLeft < aRight + MIN_SLOT){
+          const n = a.n + b.n, sumD = a.sumD + b.sumD;
+          blocks.splice(i, 2, { items: a.items.concat(b.items), sumD, n, x: sumD / n });
+          merged = true; break;
+        }
+      }
+    }
+    blocks.forEach(bl => bl.items.forEach((o, k) => { xslot[o.id] = bl.x + (k - (bl.n - 1) / 2) * MIN_SLOT; }));
   }
-  for(let it = 0; it < 6; it++){
-    layerKeys.forEach(L => packLayer(layers[L], id => {
-      const px = parseP(byId[id].parent_id).map(p => xslot[p]).filter(x => x != null);
-      return px.length ? avg(px) : (xslot[id] || 0);
-    }));
-    layerKeys.slice().reverse().forEach(L => packLayer(layers[L], id => {
+  for(let it = 0; it < 10; it++){
+    const order = (it % 2 === 0) ? layerKeys : layerKeys.slice().reverse();
+    order.forEach(L => packLayer(layers[L], id => {
+      const parents = parseP(byId[id].parent_id).filter(p => byId[p]);
       const cx = (childrenAll[id] || []).map(c => xslot[c]).filter(x => x != null);
-      return cx.length ? avg(cx) : (xslot[id] || 0);
+      const refs = cx.slice();
+      if(parents.length >= 2){
+        const px = parents.map(p => xslot[p]).filter(x => x != null);
+        if(px.length) refs.push(avg(px));
+      } else if(!cx.length && parents.length){
+        const p0 = xslot[parents[0]]; if(p0 != null) refs.push(p0);
+      }
+      return refs.length ? avg(refs) : (xslot[id] || 0);
     }));
   }
 
